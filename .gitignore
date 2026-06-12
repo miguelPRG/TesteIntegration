@@ -1,0 +1,34 @@
+# Gradle
+.gradle/
+build/
+
+# Java
+*.class
+bin/
+out/
+
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+# Runtime database files created by the Library API
+tmp/
+*.mv.db
+*.trace.db
+*.lock.db
+
+# API executable should not be submitted with the test project
+*.jar
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# Logs
+*.log
