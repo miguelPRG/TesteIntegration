@@ -12,8 +12,10 @@ import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
 import api.classes.Book;
@@ -24,6 +26,7 @@ import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 
 
+@TestMethodOrder(MethodOrderer.DisplayName.class)
 public class BookTest extends BaseTest {
         
     private static final AtomicLong ISBN_SEQUENCE = new AtomicLong(System.currentTimeMillis());
@@ -440,7 +443,7 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("CT016 - Atualizar livro com status inválido deve falhar")
+    @DisplayName("CT013 - Atualizar livro com status inválido deve falhar")
     public void deveFalharAoAtualizarLivroComStatusInvalido() {
         given()
             .contentType(ContentType.JSON)

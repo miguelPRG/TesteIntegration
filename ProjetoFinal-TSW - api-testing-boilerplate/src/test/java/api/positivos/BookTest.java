@@ -33,7 +33,8 @@ public class BookTest extends BaseTest {
     private static final AtomicLong ISBN_SEQUENCE = new AtomicLong(System.currentTimeMillis());
 
     private Integer livroParaTesteId;
-    private String isbnParaTeste = gerarIsbnValido();
+    private Integer membroParaTesteId;
+    private String isbnParaTeste;
 
     // Este beforeEach cria um livro apenas para os testes que precisam de um livro existente(GET PUT DELETE).
     @BeforeEach
@@ -51,7 +52,59 @@ public class BookTest extends BaseTest {
             return;
         }
 
-        Book livroOriginal = new Book(
+        livroParaTesteId = criarLivro(criarLivroValido());
+    }
+
+    // Este afterEach é executado após cada teste, garantindo que qualquer livro criado durante o teste seja removido. Isso mantém o ambiente de teste limpo e evita interferências entre os testes.
+    @AfterEach
+    void limparLivrosCriados() {
+        if (livroParaTesteId != null) {
+            apagarLivro(livroParaTesteId);
+        }
+
+        if (membroParaTesteId != null) {
+            apagarMembro(membroParaTesteId);
+        }
+
+        livroParaTesteId = null;
+        membroParaTesteId = null;
+    }
+
+    private Integer criarLivro(Book livro) {
+        return given()
+            .contentType(ContentType.JSON)
+            .body(livro)
+        .when()
+            .post("/book")
+        .then()
+            .statusCode(201)
+            .body(notNullValue())
+            .extract()
+            .as(Integer.class);
+    }
+
+    private void apagarLivro(Integer livroId) {
+        given()
+            .queryParam("forceRemove", true)
+        .when()
+            .delete("/book/{id}", livroId)
+        .then()
+            .statusCode(anyOf(equalTo(204), equalTo(404)));
+    }
+
+    private void apagarMembro(Integer membroId) {
+        given()
+            .queryParam("forceRemove", true)
+        .when()
+            .delete("/member/{id}", membroId)
+        .then()
+            .statusCode(anyOf(equalTo(204), equalTo(404)));
+    }
+
+    private Book criarLivroValido() {
+        isbnParaTeste = gerarIsbnValido();
+
+        return new Book(
             "Effective Java",
             "Joshua Bloch",
             "Addison-Wesley",
@@ -61,36 +114,63 @@ public class BookTest extends BaseTest {
             isbnParaTeste,
             BookStatus.AVAILABLE
         );
+    }
 
-        livroParaTesteId = given()
+    private Integer criarMembro(Member membro) {
+        return given()
             .contentType(ContentType.JSON)
-            .body(livroOriginal)
+            .body(membro)
         .when()
-            .post("/book")
+            .post("/member")
         .then()
             .statusCode(201)
-            .body(notNullValue())
             .extract()
             .as(Integer.class);
-
     }
 
-    // Este afterEach é executado após cada teste, garantindo que qualquer livro criado durante o teste seja removido. Isso mantém o ambiente de teste limpo e evita interferências entre os testes.
-    @AfterEach
-    void limparLivrosCriados() {
-        if (livroParaTesteId != null) {
-            given()
-                .queryParam("forceRemove", true)
-            .when()
-                .delete("/book/{id}", livroParaTesteId)
-            .then()
-                .statusCode(anyOf(equalTo(204), equalTo(404)));
+    private Member criarMembroValido() {
+        long valorUnico = ISBN_SEQUENCE.incrementAndGet() % 1_000_000;
+
+        return new Member(
+            "João",
+            "Silva",
+            "Rua A",
+            "1234-567",
+            "Lisboa",
+            "Portugal",
+            912345678,
+            gerarNifValido(valorUnico),
+            "joao.silva" + valorUnico + "@example.com",
+            "1990-01-01",
+            "2023-01-01"
+        );
+    }
+
+    private Integer gerarNifValido(long valorUnico) {
+        String base = "2" + String.format("%07d", valorUnico % 10_000_000);
+        int soma = 0;
+
+        for (int i = 0; i < base.length(); i++) {
+            int digito = Character.getNumericValue(base.charAt(i));
+            soma += digito * (9 - i);
         }
 
-        livroParaTesteId = null;
+        int digitoControlo = 11 - (soma % 11);
+        if (digitoControlo >= 10) {
+            digitoControlo = 0;
+        }
+
+        return Integer.parseInt(base + digitoControlo);
     }
 
-    // Método auxiliar para gerar um ISBN válido
+    private void criarReservaParaTeste() {
+        given()
+        .when()
+            .post("/reservation/member/{memberId}/book{bookId}", membroParaTesteId, livroParaTesteId)
+        .then()
+            .statusCode(201);
+    }
+
     private String gerarIsbnValido() {
         String base = "978" + String.format("%09d", ISBN_SEQUENCE.incrementAndGet() % 1_000_000_000);
         int soma = 0;
@@ -107,27 +187,9 @@ public class BookTest extends BaseTest {
     @Test
     @DisplayName("CT001 - Criar um livro com sucesso")
     public void deveCriarLivroComSucesso() {
-        Book novoLivro = new Book(
-            "O Principezinho",
-            "Antoine de Saint-Exupéry",
-            "Editorial Presença",
-            2024,
-            "1",
-            "Livro de teste",
-            isbnParaTeste,
-            BookStatus.AVAILABLE
-        );
+        Book novoLivro = criarLivroValido();
 
-        livroParaTesteId = given()
-            .contentType(ContentType.JSON)
-            .body(novoLivro)
-        .when()
-            .post("/book")
-        .then()
-            .statusCode(201)
-            .body(notNullValue())
-            .extract()
-            .as(Integer.class);
+        livroParaTesteId = criarLivro(novoLivro);
     }
 
     @Test
@@ -241,33 +303,16 @@ public class BookTest extends BaseTest {
     @Test
     @DisplayName("CT005 - Tentar apagar um livro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarLivroMesmoComReservaAtiva() {
+        membroParaTesteId = criarMembro(criarMembroValido());
+        criarReservaParaTeste();
         
-        // Criar um membro para a reserva
-        Integer memberId = given()
-            .contentType(ContentType.JSON)
-            .body(new Member( "João", "Silva", "Rua A", "1234-567", "Lisboa", "Portugal", 912345678, 123456789, "joao.silva@example.com", "1990-01-01", "2023-01-01"))
-            .when()
-                .post("/member")
-            .then()
-                .statusCode(201)
-                .extract()
-                .as(Integer.class);
-
-
-        // Criar uma reserva para o livro
-        given()
-        .when()
-            .post("/reservation/member/{memberId}/book{bookId}", memberId, livroParaTesteId)
-        .then()
-            .statusCode(201);
-        
-        // Tentar apagar o livro com forceRemove true
         given()
             .queryParam("forceRemove", true)
         .when()
             .delete("/book/{id}", livroParaTesteId)
         .then()
             .statusCode(204);
-        
+
+        livroParaTesteId = null;
     }
 }
