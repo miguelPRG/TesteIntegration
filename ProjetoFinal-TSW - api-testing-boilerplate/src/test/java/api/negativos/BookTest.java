@@ -1,13 +1,8 @@
 package api.negativos;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,16 +15,22 @@ import org.junit.jupiter.api.TestMethodOrder;
 import api.BaseTest;
 import api.classes.Book;
 import api.classes.BookStatus;
-import api.classes.Member;
+import static api.helpers.ApiActions.apagarLivro;
+import static api.helpers.ApiActions.apagarMembro;
+import static api.helpers.ApiActions.criarLivro;
+import static api.helpers.ApiActions.criarMembro;
+import static api.helpers.ApiActions.criarReserva;
+import static api.helpers.DadosTesteFactory.criarLivroComDatatypesInvalidos;
+import static api.helpers.DadosTesteFactory.criarLivroComStatusInvalido;
+import static api.helpers.DadosTesteFactory.criarLivroValido;
+import static api.helpers.DadosTesteFactory.criarMembroValido;
+import static api.helpers.DadosTesteFactory.gerarIsbnValido;
 import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 
-
 @TestMethodOrder(MethodOrderer.DisplayName.class)
 public class BookTest extends BaseTest {
-        
-    private static final AtomicLong ISBN_SEQUENCE = new AtomicLong(System.currentTimeMillis());
 
     private Integer livroParaTesteId;
     private Integer membroParaTesteId;
@@ -37,39 +38,33 @@ public class BookTest extends BaseTest {
     private Map<String, Object> livroComDatatypesInvalidos;
     private Map<String, Object> livroComStatusInvalido;
 
-    // Este beforeEach cria um livro apenas para os testes que precisam de um livro existente(GET PUT DELETE).
     @BeforeEach
     void operacoesAntes(TestInfo testInfo) {
-        
-        //Verifica se o teste vai testar body com datatypes invalidos
         boolean testeUsaLivroComDatatypesInvalidos = testInfo.getTestMethod()
             .map(method -> method.getName().equals("deveFalharAoCriarLivroComCamposDatatypeInvalidos")
                 || method.getName().equals("deveFalharAoAtualizarLivroComCamposInvalidos")
             )
             .orElse(false);
-        
-        // Verifica se o teste vai testar body com status invalido
+
         boolean testeUsaLivroComStatusInvalido = testInfo.getTestMethod()
             .map(method -> method.getName().equals("deveFalharAoCriarLivroComStatusInvalido")
                 || method.getName().equals("deveFalharAoAtualizarLivroComStatusInvalido")
             )
             .orElse(false);
-        
-        // Estes testes precisam obrigatoriamente de um livro existente
+
         boolean testePrecisaDeLivroExistente = testInfo.getTestMethod()
-        .map(method -> (method.getName().equals("deveFalharAoCriarLivroComIsbnExistente"))
-            || (method.getName().equals("deveFalharAoAtualizarLivroComCamposInvalidos"))
-            || (method.getName().equals("deveFalharAoAtualizarLivroComStatusInvalido"))
-            || (method.getName().equals("deveFalharAoApagarLivroAssociadoSemForceRemove"))
-            || (method.getName().equals("deveApagarLivroMesmoComReservaAtiva"))
-        )
+            .map(method -> method.getName().equals("deveFalharAoCriarLivroComIsbnExistente")
+                || method.getName().equals("deveFalharAoAtualizarLivroComCamposInvalidos")
+                || method.getName().equals("deveFalharAoAtualizarLivroComStatusInvalido")
+                || method.getName().equals("deveFalharAoApagarLivroAssociadoSemForceRemove")
+                || method.getName().equals("deveApagarLivroMesmoComReservaAtiva")
+            )
             .orElse(false);
 
-        // Estes testes precisam obrigatoriamente de um livro existente e uma reserva ativa associada a esse livro
         boolean testePrecisaDeReservaAtiva = testInfo.getTestMethod()
-        .map(method -> (method.getName().equals("deveFalharAoApagarLivroAssociadoSemForceRemove"))
-            || (method.getName().equals("deveApagarLivroMesmoComReservaAtiva"))
-        )
+            .map(method -> method.getName().equals("deveFalharAoApagarLivroAssociadoSemForceRemove")
+                || method.getName().equals("deveApagarLivroMesmoComReservaAtiva")
+            )
             .orElse(false);
 
         if (testeUsaLivroComDatatypesInvalidos) {
@@ -84,42 +79,20 @@ public class BookTest extends BaseTest {
         }
 
         isbnParaTeste = gerarIsbnValido();
-
-        Book livroOriginal = new Book(
-            "Effective Java",
-            "Joshua Bloch",
-            "Addison-Wesley",
-            2018,
-            "3",
-            "Livro antes da atualização",
-            isbnParaTeste,
-            BookStatus.AVAILABLE
-        );
-
-        livroParaTesteId = given()
-            .contentType(ContentType.JSON)
-            .body(livroOriginal)
-        .when()
-            .post("/book")
-        .then()
-            .statusCode(201)
-            .body(notNullValue())
-            .extract()
-            .as(Integer.class);
+        livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro antes da atualização"));
 
         if (testeUsaLivroComStatusInvalido) {
             livroComStatusInvalido = criarLivroComStatusInvalido(isbnParaTeste);
         }
 
         if (testePrecisaDeReservaAtiva) {
-            criarMembroParaTeste();
-            criarReservaParaTeste();
+            membroParaTesteId = criarMembro(criarMembroValido());
+            criarReserva(membroParaTesteId, livroParaTesteId);
         }
     }
 
-    // Este afterEach é executado após cada teste, garantindo que qualquer livro criado durante o teste ou reserva seja removido.
     @AfterEach
-    void limparLivrosCriados() {
+    void limparDadosCriados() {
         if (livroParaTesteId != null) {
             apagarLivro(livroParaTesteId);
         }
@@ -134,118 +107,6 @@ public class BookTest extends BaseTest {
         livroComStatusInvalido = null;
     }
 
-    private void apagarLivro(Integer livroId) {
-        given()
-            .queryParam("forceRemove", true)
-        .when()
-            .delete("/book/{id}", livroId)
-        .then()
-            .statusCode(anyOf(equalTo(204), equalTo(404)));
-    }
-
-    private void apagarMembro(Integer membroId) {
-        given()
-            .queryParam("forceRemove", true)
-        .when()
-            .delete("/member/{id}", membroId)
-        .then()
-            .statusCode(anyOf(equalTo(204), equalTo(404)));
-    }
-
-    private void criarMembroParaTeste() {
-        long valorUnico = ISBN_SEQUENCE.incrementAndGet() % 1_000_000;
-        int nifValido = gerarNifValido(valorUnico);
-
-        Member membro = new Member(
-            "João",
-            "Silva",
-            "Rua A",
-            "1234-567",
-            "Lisboa",
-            "Portugal",
-            912345678,
-            nifValido,
-            "joao.silva" + valorUnico + "@example.com",
-            "1990-01-01",
-            "2023-01-01"
-        );
-
-        membroParaTesteId = given()
-            .contentType(ContentType.JSON)
-            .body(membro)
-        .when()
-            .post("/member")
-        .then()
-            .statusCode(201)
-            .extract()
-            .as(Integer.class);
-    }
-
-    private Integer gerarNifValido(long valorUnico) {
-        String base = "2" + String.format("%07d", valorUnico % 10_000_000);
-        int soma = 0;
-
-        for (int i = 0; i < base.length(); i++) {
-            int digito = Character.getNumericValue(base.charAt(i));
-            soma += digito * (9 - i);
-        }
-
-        int digitoControlo = 11 - (soma % 11);
-        if (digitoControlo >= 10) {
-            digitoControlo = 0;
-        }
-
-        return Integer.parseInt(base + digitoControlo);
-    }
-
-    private void criarReservaParaTeste() {
-        given()
-        .when()
-            .post("/reservation/member/{memberId}/book{bookId}", membroParaTesteId, livroParaTesteId)
-        .then()
-            .statusCode(201);
-    }
-
-    // Método auxiliar para gerar um ISBN válido
-    private String gerarIsbnValido() {
-        String base = "978" + String.format("%09d", ISBN_SEQUENCE.incrementAndGet() % 1_000_000_000);
-        int soma = 0;
-
-        for (int i = 0; i < base.length(); i++) {
-            int digito = Character.getNumericValue(base.charAt(i));
-            soma += (i % 2 == 0) ? digito : digito * 3;
-        }
-
-        int digitoControlo = (10 - (soma % 10)) % 10;
-        return base + digitoControlo;
-    }
-
-    private Map<String, Object> criarLivroComDatatypesInvalidos() {
-        Map<String, Object> livroInvalido = new HashMap<>();
-        livroInvalido.put("title", 12345); // Título com datatype inválido
-        livroInvalido.put("author", true); // Autor com datatype inválido
-        livroInvalido.put("publisher", 67890); // Editora com datatype inválido
-        livroInvalido.put("editionYear", "Ano inválido"); // Ano de publicação com datatype inválido
-        livroInvalido.put("edition", 1); // Edição com datatype inválido
-        livroInvalido.put("description", 12345); // Descrição com datatype inválido
-        livroInvalido.put("isbn", 9780134685991L); // ISBN com datatype inválido
-        livroInvalido.put("status", 123); // Status com datatype inválido
-        return livroInvalido;
-    }
-
-    private Map<String, Object> criarLivroComStatusInvalido(String isbn) {
-        Map<String, Object> livroInvalido = new HashMap<>();
-        livroInvalido.put("title", "Título de Teste");
-        livroInvalido.put("author", "Autor de Teste");
-        livroInvalido.put("publisher", "Editora Teste");
-        livroInvalido.put("editionYear", 2024);
-        livroInvalido.put("edition", "1");
-        livroInvalido.put("description", "Descrição do livro de teste");
-        livroInvalido.put("isbn", isbn);
-        livroInvalido.put("status", "INVALID_STATUS"); // Status inválido
-        return livroInvalido;
-    }
-
     @Test
     @DisplayName("CT006 - Criar livro com campos de datatype inválidos deve falhar")
     public void deveFalharAoCriarLivroComCamposDatatypeInvalidos() {
@@ -254,14 +115,13 @@ public class BookTest extends BaseTest {
             .body(livroComDatatypesInvalidos)
         .when()
             .post("/book");
-        
+
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                livroParaTesteId = response.as(Integer.class);
+            livroParaTesteId = response.as(Integer.class);
         }
 
         assertEquals(400, response.statusCode());
     }
-
 
     @Test
     @DisplayName("CT007 - Criar livro com status inválido")
@@ -271,11 +131,11 @@ public class BookTest extends BaseTest {
             .body(livroComStatusInvalido)
         .when()
             .post("/book");
-        
+
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                livroParaTesteId = response.as(Integer.class);
+            livroParaTesteId = response.as(Integer.class);
         }
-            
+
         assertEquals(400, response.statusCode());
     }
 
@@ -286,10 +146,10 @@ public class BookTest extends BaseTest {
             "Título de Teste",
             "Autor de Teste",
             "Editora Teste",
-            -2024,  // Ano de publicação inválido
+            -2024,
             "1",
             "Descrição do livro de teste",
-            isbnParaTeste,
+            gerarIsbnValido(),
             null
         );
 
@@ -298,29 +158,26 @@ public class BookTest extends BaseTest {
             .body(livroInvalido)
         .when()
             .post("/book");
-        
+
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                livroParaTesteId = response.as(Integer.class);
+            livroParaTesteId = response.as(Integer.class);
         }
-            
+
         assertEquals(400, response.statusCode());
 
-
-        // Vamos verificar se dá erro caso o ano de publicação seja no futuro
         livroInvalido.setEditionYear(LocalDate.now().getYear() + 1);
 
         response = given()
             .contentType(ContentType.JSON)
             .body(livroInvalido)
-        .when() 
+        .when()
             .post("/book");
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                livroParaTesteId = response.as(Integer.class);
+            livroParaTesteId = response.as(Integer.class);
         }
-            
-        assertEquals(400, response.statusCode());
 
+        assertEquals(400, response.statusCode());
     }
 
     @Test
@@ -333,7 +190,7 @@ public class BookTest extends BaseTest {
             2024,
             "1",
             "Descrição do livro de teste",
-            "1234567890123", // ISBN inválido
+            "1234567890123",
             BookStatus.AVAILABLE
         );
 
@@ -342,11 +199,11 @@ public class BookTest extends BaseTest {
             .body(livroInvalido)
         .when()
             .post("/book");
-        
+
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                livroParaTesteId = response.as(Integer.class);
+            livroParaTesteId = response.as(Integer.class);
         }
-            
+
         assertEquals(400, response.statusCode());
     }
 
@@ -360,7 +217,7 @@ public class BookTest extends BaseTest {
             2024,
             "1",
             "Descrição do livro de teste",
-            isbnParaTeste, // Usar o ISBN do livro existente
+            isbnParaTeste,
             BookStatus.AVAILABLE
         );
 
@@ -371,16 +228,11 @@ public class BookTest extends BaseTest {
             .post("/book");
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                apagarLivro(response.as(Integer.class));
+            apagarLivro(response.as(Integer.class));
         }
-            
+
         assertEquals(400, response.statusCode());
     }
-    
-    /*
-        Obter:
-            - Tentar obter um livro com um ID que não existe e verificar se a API retorna o erro adequado (ex: 404 Not Found).
-    */
 
     @Test
     @DisplayName("CT011 - Obter livro com ID inexistente ou inválido deve falhar")
@@ -398,7 +250,6 @@ public class BookTest extends BaseTest {
             .statusCode(400);
     }
 
-
     @Test
     @DisplayName("CT012 - Atualizar livro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoAtualizarLivroComIdInexistente() {
@@ -412,7 +263,7 @@ public class BookTest extends BaseTest {
             "978-0134685991",
             BookStatus.AVAILABLE
         );
-        
+
         given()
             .contentType(ContentType.JSON)
             .body(livroAtualizado)
@@ -458,17 +309,17 @@ public class BookTest extends BaseTest {
     @DisplayName("CT014 - Apagar livro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoApagarLivroComIdInexistente() {
         given()
-        .when()            
+        .when()
             .delete("/book/{id}", "idInvalido")
         .then()
             .statusCode(400);
-        
+
         given()
         .when()
             .delete("/book/{id}", 99999)
         .then()
             .statusCode(404);
-    }   
+    }
 
     @Test
     @DisplayName("CT015 - Apagar livro associados a uma reserva sem usar forceRemove deve falhar")
@@ -476,7 +327,7 @@ public class BookTest extends BaseTest {
         Response response = given()
         .when()
             .delete("/book/{id}", livroParaTesteId);
-        
+
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
             livroParaTesteId = null;
         }

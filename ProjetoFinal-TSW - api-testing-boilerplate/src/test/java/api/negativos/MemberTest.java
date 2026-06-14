@@ -1,13 +1,8 @@
 package api.negativos;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,9 +13,16 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
-import api.classes.Book;
-import api.classes.BookStatus;
 import api.classes.Member;
+import static api.helpers.ApiActions.apagarLivro;
+import static api.helpers.ApiActions.apagarMembro;
+import static api.helpers.ApiActions.criarLivro;
+import static api.helpers.ApiActions.criarMembro;
+import static api.helpers.ApiActions.criarReserva;
+import static api.helpers.DadosTesteFactory.criarLivroValido;
+import static api.helpers.DadosTesteFactory.criarMembroComCamposFormatoInvalido;
+import static api.helpers.DadosTesteFactory.criarMembroComDatatypesInvalidos;
+import static api.helpers.DadosTesteFactory.criarMembroValido;
 import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -28,8 +30,6 @@ import io.restassured.response.Response;
 @DisplayName("Testes Negativos da Entidade: Member")
 @TestMethodOrder(MethodOrderer.DisplayName.class)
 public class MemberTest extends BaseTest {
-
-    private static final AtomicLong MEMBER_SEQUENCE = new AtomicLong(System.currentTimeMillis());
 
     private Integer membroParaTesteId;
     private Integer livroParaTesteId;
@@ -67,12 +67,12 @@ public class MemberTest extends BaseTest {
 
         if (testePrecisaDeReservaAtiva) {
             livroParaTesteId = criarLivro(criarLivroValido());
-            criarReservaParaTeste();
+            criarReserva(membroParaTesteId, livroParaTesteId);
         }
     }
 
     @AfterEach
-    void limparMembroCriado() {
+    void limparDadosCriados() {
         if (membroParaTesteId != null) {
             apagarMembro(membroParaTesteId);
         }
@@ -84,146 +84,6 @@ public class MemberTest extends BaseTest {
         membroParaTesteId = null;
         livroParaTesteId = null;
         membroComDatatypesInvalidos = null;
-    }
-
-    private Integer criarMembro(Member membro) {
-        return given()
-            .contentType(ContentType.JSON)
-            .body(membro)
-        .when()
-            .post("/member")
-        .then()
-            .statusCode(201)
-            .body(notNullValue())
-            .extract()
-            .as(Integer.class);
-    }
-
-    private void apagarMembro(Integer membroId) {
-        given()
-            .queryParam("forceRemove", true)
-        .when()
-            .delete("/member/{id}", membroId)
-        .then()
-            .statusCode(anyOf(equalTo(204), equalTo(404)));
-    }
-
-    private Integer criarLivro(Book livro) {
-        return given()
-            .contentType(ContentType.JSON)
-            .body(livro)
-        .when()
-            .post("/book")
-        .then()
-            .statusCode(201)
-            .body(notNullValue())
-            .extract()
-            .as(Integer.class);
-    }
-
-    private void apagarLivro(Integer livroId) {
-        given()
-            .queryParam("forceRemove", true)
-        .when()
-            .delete("/book/{id}", livroId)
-        .then()
-            .statusCode(anyOf(equalTo(204), equalTo(404)));
-    }
-
-    private Member criarMembroValido() {
-        long valorUnico = MEMBER_SEQUENCE.incrementAndGet() % 1_000_000;
-
-        return new Member(
-            "João",
-            "Silva",
-            "Rua A",
-            "1234-567",
-            "Lisboa",
-            "Portugal",
-            912345678,
-            gerarNifValido(valorUnico),
-            "joao.silva" + valorUnico + "@example.com",
-            "1990-01-01",
-            "2023-01-01"
-        );
-    }
-
-    private Book criarLivroValido() {
-        return new Book(
-            "Effective Java",
-            "Joshua Bloch",
-            "Addison-Wesley",
-            2018,
-            "3",
-            "Livro para reserva",
-            gerarIsbnValido(),
-            BookStatus.AVAILABLE
-        );
-    }
-
-    private Integer gerarNifValido(long valorUnico) {
-        String base = "2" + String.format("%07d", valorUnico % 10_000_000);
-        int soma = 0;
-
-        for (int i = 0; i < base.length(); i++) {
-            int digito = Character.getNumericValue(base.charAt(i));
-            soma += digito * (9 - i);
-        }
-
-        int digitoControlo = 11 - (soma % 11);
-        if (digitoControlo >= 10) {
-            digitoControlo = 0;
-        }
-
-        return Integer.parseInt(base + digitoControlo);
-    }
-
-    private String gerarIsbnValido() {
-        String base = "978" + String.format("%09d", MEMBER_SEQUENCE.incrementAndGet() % 1_000_000_000);
-        int soma = 0;
-
-        for (int i = 0; i < base.length(); i++) {
-            int digito = Character.getNumericValue(base.charAt(i));
-            soma += (i % 2 == 0) ? digito : digito * 3;
-        }
-
-        int digitoControlo = (10 - (soma % 10)) % 10;
-        return base + digitoControlo;
-    }
-
-    private void criarReservaParaTeste() {
-        given()
-        .when()
-            .post("/reservation/member/{memberId}/book{bookId}", membroParaTesteId, livroParaTesteId)
-        .then()
-            .statusCode(201);
-    }
-
-    private Map<String, Object> criarMembroComDatatypesInvalidos() {
-        Map<String, Object> membroInvalido = new HashMap<>();
-        membroInvalido.put("firstName", 12345);
-        membroInvalido.put("lastName", true);
-        membroInvalido.put("address", 67890);
-        membroInvalido.put("postalCode", false);
-        membroInvalido.put("city", 12345);
-        membroInvalido.put("country", 67890);
-        membroInvalido.put("phoneNumber", "telefone inválido");
-        membroInvalido.put("nif", "nif inválido");
-        membroInvalido.put("email", 12345);
-        membroInvalido.put("birthDate", 12345);
-        membroInvalido.put("registrationDate", true);
-        return membroInvalido;
-    }
-
-    private Member criarMembroComCamposFormatoInvalido() {
-        Member membroInvalido = criarMembroValido();
-        membroInvalido.setPostalCode("1234567");
-        membroInvalido.setCity("Lisboa123");
-        membroInvalido.setCountry("Portugal123");
-        membroInvalido.setPhoneNumber(12345);
-        membroInvalido.setNif(123456780);
-        membroInvalido.setEmail("email-invalido");
-        return membroInvalido;
     }
 
     @Test
