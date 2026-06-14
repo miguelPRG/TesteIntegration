@@ -23,11 +23,17 @@ dependencies {
 
 test {
   useJUnitPlatform()
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+  }
 }
-
 
 tasks.register('integrationTests', Test) {
   scanForTestClasses = false
   useJUnitPlatform()
-  testLogging.showStandardStreams = true
+  testLogging {
+    events "passed", "skipped", "failed"
+    showStandardStreams = true
+  }
 }

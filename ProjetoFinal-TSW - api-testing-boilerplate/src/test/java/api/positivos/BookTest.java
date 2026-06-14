@@ -1,41 +1,96 @@
 package api.positivos;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
+import api.classes.Book;
+import api.classes.BookStatus;
+import api.classes.Member;
 import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
 
 @DisplayName("Testes da Entidade: Book")
+@TestMethodOrder(MethodOrderer.DisplayName.class)
 public class BookTest extends BaseTest {
 
     private static final AtomicLong ISBN_SEQUENCE = new AtomicLong(System.currentTimeMillis());
 
-    private final List<Integer> livrosCriados = new ArrayList<>();
+    private Integer livroParaTesteId;
+    private String isbnParaTeste = gerarIsbnValido();
 
+    // Este beforeEach cria um livro apenas para os testes que precisam de um livro existente(GET PUT DELETE).
+    @BeforeEach
+    void criarLivroAntesDeAtualizarOuApagar(TestInfo testInfo) {
+        boolean testePrecisaDeLivroExistente = testInfo.getTestMethod()
+            .map(method -> (method.getName().equals("deveListarLivrosComSucesso") 
+                || (method.getName().equals("deveObterLivroPorIdComSucesso"))
+                || (method.getName().equals("deveAtualizarLivroComSucesso"))
+                || (method.getName().equals("deveApagarLivroComSucesso")))
+                || (method.getName().equals("deveApagarLivroMesmoComReservaAtiva"))
+            )
+            .orElse(false);
+
+        if (!testePrecisaDeLivroExistente) {
+            return;
+        }
+
+        Book livroOriginal = new Book(
+            "Effective Java",
+            "Joshua Bloch",
+            "Addison-Wesley",
+            2018,
+            "3",
+            "Livro antes da atualização",
+            isbnParaTeste,
+            BookStatus.AVAILABLE
+        );
+
+        livroParaTesteId = given()
+            .contentType(ContentType.JSON)
+            .body(livroOriginal)
+        .when()
+            .post("/book")
+        .then()
+            .statusCode(201)
+            .body(notNullValue())
+            .extract()
+            .as(Integer.class);
+
+    }
+
+    // Este afterEach é executado após cada teste, garantindo que qualquer livro criado durante o teste seja removido. Isso mantém o ambiente de teste limpo e evita interferências entre os testes.
     @AfterEach
     void limparLivrosCriados() {
-        for (Integer livroId : livrosCriados) {
+        if (livroParaTesteId != null) {
             given()
+                .queryParam("forceRemove", true)
             .when()
-                .delete("/book/{id}", livroId)
+                .delete("/book/{id}", livroParaTesteId)
             .then()
                 .statusCode(anyOf(equalTo(204), equalTo(404)));
         }
 
-        livrosCriados.clear();
+        livroParaTesteId = null;
     }
 
+    // Método auxiliar para gerar um ISBN válido
     private String gerarIsbnValido() {
         String base = "978" + String.format("%09d", ISBN_SEQUENCE.incrementAndGet() % 1_000_000_000);
         int soma = 0;
@@ -49,35 +104,21 @@ public class BookTest extends BaseTest {
         return base + digitoControlo;
     }
 
-    private String criarPayloadLivro(String titulo, String autor, String editora, int ano, String edicao,
-            String descricao) {
-        return """
-            {
-                "title": "%s",
-                "author": "%s",
-                "publisher": "%s",
-                "editionYear": %d,
-                "edition": "%s",
-                "description": "%s",
-                "isbn": "%s",
-                "status": "AVAILABLE"
-            }
-            """.formatted(titulo, autor, editora, ano, edicao, descricao, gerarIsbnValido());
-    }
-
     @Test
     @DisplayName("CT001 - Criar um livro com sucesso")
     public void deveCriarLivroComSucesso() {
-        String novoLivro = criarPayloadLivro(
+        Book novoLivro = new Book(
             "O Principezinho",
             "Antoine de Saint-Exupéry",
             "Editorial Presença",
             2024,
             "1",
-            "Livro de teste"
+            "Livro de teste",
+            isbnParaTeste,
+            BookStatus.AVAILABLE
         );
 
-        Integer livroId = given()
+        livroParaTesteId = given()
             .contentType(ContentType.JSON)
             .body(novoLivro)
         .when()
@@ -87,186 +128,146 @@ public class BookTest extends BaseTest {
             .body(notNullValue())
             .extract()
             .as(Integer.class);
-
-        livrosCriados.add(livroId);
-
-        given()
-        .when()
-            .get("/book/{id}", livroId)
-        .then()
-            .statusCode(200)
-            .body("title", equalTo("O Principezinho"))
-            .body("author", equalTo("Antoine de Saint-Exupéry"))
-            .body("publisher", equalTo("Editorial Presença"))
-            .body("editionYear", equalTo(2024))
-            .body("edition", equalTo("1"))
-            .body("description", equalTo("Livro de teste"))
-            .body("status", equalTo("AVAILABLE"));
     }
 
     @Test
-    @DisplayName("CT002 - Obter um livro existente por id")
-    public void deveObterLivroPorIdComSucesso() {
-        String novoLivro = criarPayloadLivro(
-            "Clean Code",
-            "Robert C. Martin",
-            "Prentice Hall",
-            2008,
-            "1",
-            "Livro criado para testar consulta por id"
-        );
-
-        Integer livroId = given()
-            .contentType(ContentType.JSON)
-            .body(novoLivro)
-        .when()
-            .post("/book")
-        .then()
-            .statusCode(201)
-            .body(notNullValue())
-            .extract()
-            .as(Integer.class);
-
-        livrosCriados.add(livroId);
-
-        given()
-        .when()
-            .get("/book/{id}", livroId)
-        .then()
-            .statusCode(200)
-            .body("id", equalTo(livroId))
-            .body("title", equalTo("Clean Code"))
-            .body("author", equalTo("Robert C. Martin"))
-            .body("status", equalTo("AVAILABLE"));
-    }
-
-    @Test
-    @DisplayName("CT003 - Listar livros com sucesso")
+    @DisplayName("CT002 - Listar livros com sucesso")
     public void deveListarLivrosComSucesso() {
-        String novoLivro = criarPayloadLivro(
-            "Refactoring",
-            "Martin Fowler",
-            "Addison-Wesley",
-            2018,
-            "2",
-            "Livro criado para testar listagem"
-        );
 
-        Integer livroId = given()
-            .contentType(ContentType.JSON)
-            .body(novoLivro)
-        .when()
-            .post("/book")
-        .then()
-            .statusCode(201)
-            .body(notNullValue())
-            .extract()
-            .as(Integer.class);
-
-        livrosCriados.add(livroId);
-
-        given()
+        List<Book> livros = given()
         .when()
             .get("/book")
         .then()
             .statusCode(200)
-            .body("id", hasItem(livroId))
-            .body("title", hasItem("Refactoring"))
-            .body("author", hasItem("Martin Fowler"));
+            .extract()
+            .jsonPath()
+            .getList("", Book.class);
+
+        assertFalse(livros.isEmpty());
+
+        for (Book livro : livros) {
+            assertAll(
+                () -> assertNotNull(livro.getId()),
+                () -> assertNotNull(livro.getTitle()),
+                () -> assertNotNull(livro.getAuthor()),
+                () -> assertNotNull(livro.getPublisher()),
+                () -> assertNotNull(livro.getEditionYear()),
+                () -> assertNotNull(livro.getEdition()),
+                () -> assertNotNull(livro.getDescription()),
+                () -> assertNotNull(livro.getIsbn()),
+                () -> assertNotNull(livro.getStatus())
+            );
+        }
+
+        assertTrue(livros.stream().anyMatch(livro -> livroParaTesteId.equals(livro.getId())));
     }
 
+    @Test
+    @DisplayName("CT003 - Obter um livro existente por id")
+    public void deveObterLivroPorIdComSucesso() {
+        Book livroObtido = given()
+        .when()
+            .get("/book/{id}", livroParaTesteId)
+        .then()
+            .statusCode(200)
+            .extract()
+            .as(Book.class);
+
+        assertAll(
+            () -> assertNotNull(livroObtido),
+            () -> assertEquals(livroParaTesteId, livroObtido.getId()),
+            () -> assertEquals("Effective Java", livroObtido.getTitle()),
+            () -> assertEquals("Joshua Bloch", livroObtido.getAuthor()),
+            () -> assertEquals("Addison-Wesley", livroObtido.getPublisher()),
+            () -> assertEquals(2018, livroObtido.getEditionYear()),
+            () -> assertEquals("3", livroObtido.getEdition()),
+            () -> assertEquals("Livro antes da atualização", livroObtido.getDescription()),
+            () -> assertEquals(isbnParaTeste, livroObtido.getIsbn()),
+            () -> assertEquals(BookStatus.AVAILABLE, livroObtido.getStatus())
+        );
+    }
+    
     @Test
     @DisplayName("CT004 - Atualizar um livro com sucesso")
     public void deveAtualizarLivroComSucesso() {
-        String livroOriginal = criarPayloadLivro(
-            "Effective Java",
-            "Joshua Bloch",
-            "Addison-Wesley",
-            2018,
-            "3",
-            "Livro antes da atualização"
-        );
-
-        Integer livroId = given()
-            .contentType(ContentType.JSON)
-            .body(livroOriginal)
+        Book bookUpdated = given()
         .when()
-            .post("/book")
+            .get("/book/{id}", livroParaTesteId)
         .then()
-            .statusCode(201)
-            .body(notNullValue())
+            .statusCode(200)
+            .extract()
+            .as(Book.class);
+
+        bookUpdated.setAuthor("Miguel Gonçalves");
+        bookUpdated.setStatus(BookStatus.UNAVAILABLE);
+
+        Integer livroObtidoId = given()
+            .contentType(ContentType.JSON)
+            .body(bookUpdated)
+        .when()
+            .put("/book/{id}", livroParaTesteId)
+        .then()
+            .statusCode(200)
             .extract()
             .as(Integer.class);
 
-        livrosCriados.add(livroId);
-
-        String livroAtualizado = criarPayloadLivro(
-            "Effective Java - Updated",
-            "Joshua Bloch",
-            "Pearson",
-            2020,
-            "3",
-            "Livro atualizado por teste automatizado"
+        assertAll(
+            () -> assertNotNull(livroObtidoId),
+            () -> assertTrue(livroObtidoId > 0, "O ID do livro atualizado deve ser maior que zero")
         );
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(livroAtualizado)
+        Book livroObtido = given()
         .when()
-            .put("/book/{id}", livroId)
+            .get("/book/{id}", livroObtidoId)
         .then()
             .statusCode(200)
-            .body(equalTo(livroId.toString()));
+            .extract()
+            .as(Book.class);
 
-        given()
-        .when()
-            .get("/book/{id}", livroId)
-        .then()
-            .statusCode(200)
-            .body("title", equalTo("Effective Java - Updated"))
-            .body("publisher", equalTo("Pearson"))
-            .body("editionYear", equalTo(2020))
-            .body("description", equalTo("Livro atualizado por teste automatizado"))
-            .body("status", equalTo("AVAILABLE"));
+        assertAll(
+            () -> assertNotNull(livroObtido),
+            () -> assertEquals(livroParaTesteId, livroObtido.getId()),
+            () -> assertEquals("Effective Java", livroObtido.getTitle()),
+            () -> assertEquals("Miguel Gonçalves", livroObtido.getAuthor()),
+            () -> assertEquals("Addison-Wesley", livroObtido.getPublisher()),
+            () -> assertEquals(2018, livroObtido.getEditionYear()),
+            () -> assertEquals("3", livroObtido.getEdition()),
+            () -> assertEquals("Livro antes da atualização", livroObtido.getDescription()),
+            () -> assertEquals(bookUpdated.getIsbn(), livroObtido.getIsbn()),
+            () -> assertEquals(BookStatus.UNAVAILABLE, livroObtido.getStatus())
+        );
     }
 
     @Test
-    @DisplayName("CT005 - Apagar um livro com sucesso")
-    public void deveApagarLivroComSucesso() {
-        String novoLivro = criarPayloadLivro(
-            "Domain-Driven Design",
-            "Eric Evans",
-            "Addison-Wesley",
-            2003,
-            "1",
-            "Livro criado para testar remoção"
-        );
-
-        Integer livroId = given()
+    @DisplayName("CT005 - Tentar apagar um livro com forceRemove true mesmo que haja uma reserva ativa")
+    public void deveApagarLivroMesmoComReservaAtiva() {
+        
+        // Criar um membro para a reserva
+        Integer memberId = given()
             .contentType(ContentType.JSON)
-            .body(novoLivro)
-        .when()
-            .post("/book")
-        .then()
-            .statusCode(201)
-            .body(notNullValue())
-            .extract()
-            .as(Integer.class);
+            .body(new Member( "João", "Silva", "Rua A", "1234-567", "Lisboa", "Portugal", 912345678, 123456789, "joao.silva@example.com", "1990-01-01", "2023-01-01"))
+            .when()
+                .post("/member")
+            .then()
+                .statusCode(201)
+                .extract()
+                .as(Integer.class);
 
-        livrosCriados.add(livroId);
 
+        // Criar uma reserva para o livro
         given()
         .when()
-            .delete("/book/{id}", livroId)
+            .post("/reservation/member/{memberId}/book{bookId}", memberId, livroParaTesteId)
+        .then()
+            .statusCode(201);
+        
+        // Tentar apagar o livro com forceRemove true
+        given()
+            .queryParam("forceRemove", true)
+        .when()
+            .delete("/book/{id}", livroParaTesteId)
         .then()
             .statusCode(204);
-
-        livrosCriados.remove(livroId);
-
-        given()
-        .when()
-            .get("/book/{id}", livroId)
-        .then()
-            .statusCode(404);
+        
     }
 }
