@@ -4,18 +4,16 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
@@ -38,27 +36,9 @@ public class MemberTest extends BaseTest {
     private static Integer membroComReservaAtivaId;
     private static Integer livroComReservaAtivaId;
 
-    private int obterOrdemTeste(TestInfo testInfo) {
-        return testInfo.getTestMethod()
-            .map(method -> method.getAnnotation(Order.class))
-            .map(Order::value)
-            .orElse(0);
-    }
-
     @BeforeAll
     static void criarMembroParaTestes() {
         membroParaTesteId = criarMembro(criarMembroValido());
-    }
-
-    @BeforeEach
-    void prepararReservaAtivaParaTestesEspecificos(TestInfo testInfo) {
-        if (obterOrdemTeste(testInfo) != 23) {
-            return;
-        }
-
-        membroComReservaAtivaId = criarMembro(criarMembroValido());
-        livroComReservaAtivaId = criarLivro(criarLivroValido());
-        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
     }
 
     @AfterEach
@@ -149,26 +129,26 @@ public class MemberTest extends BaseTest {
     @Order(21)
     @DisplayName("CT021 - Atualizar um membro com sucesso")
     public void deveAtualizarMembroComSucesso() {
-        Member membroAtualizado = given()
-        .when()
-            .get("/member/{id}", membroParaTesteId)
-        .then()
-            .statusCode(200)
-            .extract()
-            .as(Member.class);
-
+        Member membroAtualizado = criarMembroValido();
         membroAtualizado.setFirstName("Miguel");
         membroAtualizado.setCity("Porto");
+        // Ignorar o ID do membro ao atualizar, pois ele não deve ser alterado.
+        membroAtualizado.setId(null);
+        // Ignorar a data de nascimento para evitar erros de validação
+        membroAtualizado.setBirthDate(null);
 
-        Integer membroAtualizadoId = given()
+        String membroAtualizadoIdResponse = given()
             .contentType(ContentType.JSON)
             .body(membroAtualizado)
         .when()
             .put("/member/{id}", membroParaTesteId)
         .then()
+            //Dá-me erro no lado do servidor(500) quando ignoro birthDate. Quando não ignoro dá-me erro 400 a dizer que a data de nascimento é inválida.
             .statusCode(200)
             .extract()
-            .as(Integer.class);
+            .asString();
+
+        Integer membroAtualizadoId = Integer.valueOf(membroAtualizadoIdResponse.trim());
 
         Member membroObtido = given()
         .when()
@@ -209,6 +189,11 @@ public class MemberTest extends BaseTest {
     @Order(23)
     @DisplayName("CT023 - Apagar membro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarMembroMesmoComReservaAtiva() {
+
+        membroComReservaAtivaId = criarMembro(criarMembroValido());
+        livroComReservaAtivaId = criarLivro(criarLivroValido());
+        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
+
         given()
             .queryParam("forceRemove", true)
         .when()
