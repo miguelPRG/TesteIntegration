@@ -66,8 +66,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(22)
-    @DisplayName("CT022 - Criar membro com campos de datatype inválidos deve falhar")
+    @Order(24)
+    @DisplayName("CT024 - Criar membro com campos de datatype inválidos deve falhar")
     public void deveFalharAoCriarMembroComCamposDatatypeInvalidos() {
         Response response = given()
             .contentType(ContentType.JSON)
@@ -83,8 +83,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(23)
-    @DisplayName("CT023 - Criar membro com datas inválidas deve falhar")
+    @Order(25)
+    @DisplayName("CT025 - Criar membro com datas inválidas deve falhar")
     public void deveFalharAoCriarMembroComDatasInvalidas() {
         Member membroInvalido = criarMembroValido();
         membroInvalido.setBirthDate("data inválida");
@@ -104,8 +104,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(24)
-    @DisplayName("CT024 - Criar membro com datas de nascimento ou registro no futuro deve falhar")
+    @Order(26)
+    @DisplayName("CT026 - Criar membro com datas de nascimento ou registro no futuro deve falhar")
     public void deveFalharAoCriarMembroComDatasNoFuturo() {
         Member membroInvalido = criarMembroValido();
         String dataFutura = LocalDate.now().plusDays(1).toString();
@@ -126,8 +126,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(25)
-    @DisplayName("CT025 - Criar membro com postal code, cidade, país, telefone, NIF ou email inválido deve falhar")
+    @Order(27)
+    @DisplayName("CT027 - Criar membro com postal code, cidade, país, telefone, NIF ou email inválido deve falhar")
     public void deveFalharAoCriarMembroComCamposFormatoInvalido() {
         Member membroInvalido = criarMembroComCamposFormatoInvalido();
 
@@ -145,8 +145,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(26)
-    @DisplayName("CT026 - Obter membro com ID inexistente ou inválido deve falhar")
+    @Order(28)
+    @DisplayName("CT028 - Obter membro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoObterMembroComIdInexistenteOuInvalido() {
         given()
         .when()
@@ -162,8 +162,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(27)
-    @DisplayName("CT027 - Atualizar membro com ID inexistente ou inválido deve falhar")
+    @Order(29)
+    @DisplayName("CT029 - Atualizar membro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoAtualizarMembroComIdInexistenteOuInvalido() {
         Member membroAtualizado = criarMembroValido();
 
@@ -185,8 +185,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(28)
-    @DisplayName("CT028 - Atualizar membro com campos de datatype inválidos deve falhar")
+    @Order(30)
+    @DisplayName("CT030 - Atualizar membro com campos de datatype inválidos deve falhar")
     public void deveFalharAoAtualizarMembroComCamposDatatypeInvalidos() {
         given()
             .contentType(ContentType.JSON)
@@ -198,8 +198,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(29)
-    @DisplayName("CT029 - Atualizar membro com datas de nascimento ou registro no futuro deve falhar")
+    @Order(31)
+    @DisplayName("CT031 - Atualizar membro com datas de nascimento ou registro no futuro deve falhar")
     public void deveFalharAoAtualizarMembroComDatasNoFuturo() {
         Member membroInvalido = criarMembroValido();
         String dataFutura = LocalDate.now().plusDays(1).toString();
@@ -216,8 +216,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(30)
-    @DisplayName("CT030 - Atualizar membro com postal code, cidade, país, telefone, NIF ou email inválido deve falhar")
+    @Order(32)
+    @DisplayName("CT032 - Atualizar membro com postal code, cidade, país, telefone, NIF ou email inválido deve falhar")
     public void deveFalharAoAtualizarMembroComCamposFormatoInvalido() {
         given()
             .contentType(ContentType.JSON)
@@ -229,8 +229,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(31)
-    @DisplayName("CT031 - Apagar membro associado a uma reserva sem usar forceRemove deve falhar")
+    @Order(33)
+    @DisplayName("CT033 - Apagar membro associado a uma reserva sem usar forceRemove deve falhar")
     public void deveFalharAoApagarMembroAssociadoSemForceRemove() {
         Response response = given()
         .when()
@@ -244,8 +244,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(32)
-    @DisplayName("CT032 - Apagar membro com ID inexistente ou inválido deve falhar")
+    @Order(34)
+    @DisplayName("CT034 - Apagar membro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoApagarMembroComIdInexistenteOuInvalido() {
         given()
         .when()

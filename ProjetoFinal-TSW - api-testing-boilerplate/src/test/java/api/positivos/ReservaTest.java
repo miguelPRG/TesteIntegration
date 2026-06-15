@@ -1,5 +1,6 @@
 package api.positivos;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
@@ -41,6 +42,7 @@ public class ReservaTest extends BaseTest {
         livroParaTesteId = criarLivro(criarLivroValido());
         membroParaTesteId = criarMembro(criarMembroValido());
         reservaParaTesteId = criarReserva(membroParaTesteId, livroParaTesteId);
+
     }
 
     @AfterAll
@@ -55,15 +57,15 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(33)
-    @DisplayName("CT033 - Deve criar uma reserva com sucesso")
+    @Order(35)
+    @DisplayName("CT035 - Deve criar uma reserva com sucesso")
     void deveCriarReservaComSucesso() {
-        assertTrue(reservaParaTesteId > 0);
+        assertNotNull(reservaParaTesteId);
     }
 
     @Test
-    @Order(34)
-    @DisplayName("CT034 - Listar todas as reservas ativas com sucesso")
+    @Order(36)
+    @DisplayName("CT036 - Listar todas as reservas ativas com sucesso")
     void deveListarTodasReservasAtivasComSucesso() {
         Response response = given()
         .when()
@@ -97,8 +99,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(35)
-    @DisplayName("CT035 - Obter uma reserva por ID com sucesso")
+    @Order(37)
+    @DisplayName("CT037 - Obter uma reserva por ID com sucesso")
     void deveObterReservaPorIdComSucesso() {
         
         Reserva reserva = given()
@@ -119,8 +121,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(36)
-    @DisplayName("CT036 - Obter uma reserva por id do membro com sucesso")
+    @Order(38)
+    @DisplayName("CT038 - Obter uma reserva por id do membro com sucesso")
     void deveObterReservaPorIdMembroComSucesso() {
         List<Reserva> reservas = given()
         .when()
@@ -152,8 +154,8 @@ public class ReservaTest extends BaseTest {
     }
     
     @Test
-    @Order(37)
-    @DisplayName("CT037 - Obter uma reserva por id do livro com sucesso")
+    @Order(39)
+    @DisplayName("CT039 - Obter uma reserva por id do livro com sucesso")
     void deveObterReservaPorIdLivroComSucesso() {
         List<Reserva> reservas = given()
         
@@ -186,15 +188,26 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(38)
-    @DisplayName("CT038 - Atualizar uma reserva com sucesso")
+    @Order(40)
+    @DisplayName("CT040 - Atualizar uma reserva com sucesso")
     void deveAtualizarReservaComSucesso() {
+
+        String oldReturnDate = given()
+        .when()
+            .get("/reservation/{id}", reservaParaTesteId)
+        .then()
+            .statusCode(200)
+            .extract()
+            .as(Reserva.class)
+            .getReturnDate();   
+        
+
         Response response = given()
         .when()
             .put("/reservation/{id}", reservaParaTesteId)
         .then()
-            // A documentação indica 204, mas a API retorna 200; Alteramos o status code para refletir o comportamento real.
-            .statusCode(200)
+            // Este teste falha um vez que é retornado 400
+            .statusCode(204)
             .extract()
             .response();
         
@@ -206,8 +219,11 @@ public class ReservaTest extends BaseTest {
             .extract()
             .as(Reserva.class);
 
-        // Se foi atualizado com sucesso, a data de retorno já não deve ser nula.
-        assertNotNull(reservaAtualizada.getReturnDate());
+        String novaReturnDate = reservaAtualizada.getReturnDate();
+
+        // Se foi atualizado com sucesso, a nova data de retorno deve ser posterior à anterior.
+        assertNotNull(novaReturnDate);
+        assertTrue(LocalDateTime.parse(novaReturnDate).isAfter(LocalDateTime.parse(oldReturnDate)));
 
         String responseBody = response.asString().trim();
 

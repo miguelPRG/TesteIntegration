@@ -8,6 +8,8 @@ import api.classes.Book;
 import api.classes.Member;
 import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
+
 
 public final class ApiActions {
 
@@ -41,6 +43,17 @@ public final class ApiActions {
     }
 
     public static Integer criarReserva(Integer membroId, Integer livroId) {
+        
+        // Como não conseguimos apagar reservas, vamos garatinr que não criamos mais nenhuma caso exista pelo menos uma
+        
+        Response response = given()
+        .when()
+            .get("/reservation")
+        .then()
+            .statusCode(200)
+            .extract()
+            .response();        
+        
         return given()
         .when()
             .post("/reservation/member/{memberId}/book{bookId}", membroId, livroId)

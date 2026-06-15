@@ -2,17 +2,19 @@ package api.positivos;
 
 import java.util.List;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
@@ -38,24 +40,44 @@ public class BookTest extends BaseTest {
     private static Integer membroComReservaAtivaId;
     private static String isbnParaTeste;
 
+    private int obterOrdemTeste(TestInfo testInfo) {
+        return testInfo.getTestMethod()
+            .map(method -> method.getAnnotation(Order.class))
+            .map(Order::value)
+            .orElse(0);
+    }
+
     @BeforeAll
     static void criarLivroParaTestes() {
         isbnParaTeste = gerarIsbnValido();
         livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro antes da atualização"));
     }
 
-    @AfterAll
-    static void limparDadosCriados() {
-        if (livroParaTesteId != null) {
-            apagarLivro(livroParaTesteId);
+    @BeforeEach
+    void prepararReservaAtivaParaTestesEspecificos(TestInfo testInfo) {
+        int ordemTeste = obterOrdemTeste(testInfo);
+
+        if (ordemTeste < 6) {
+            return;
         }
 
+        membroComReservaAtivaId = criarMembro(criarMembroValido());
+        livroComReservaAtivaId = criarLivro(criarLivroValido(gerarIsbnValido(), "Livro com reserva ativa"));
+        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
+    }
+
+    @AfterEach
+    void limparDadosReservaAtiva(TestInfo testInfo) {
+
+
         if (livroComReservaAtivaId != null) {
-            apagarLivro(livroComReservaAtivaId);
+            apagarLivro(livroComReservaAtivaId, true);
+            livroComReservaAtivaId = null;
         }
 
         if (membroComReservaAtivaId != null) {
-            apagarMembro(membroComReservaAtivaId);
+            apagarMembro(membroComReservaAtivaId, true);
+            membroComReservaAtivaId = null;
         }
     }
 
@@ -137,9 +159,12 @@ public class BookTest extends BaseTest {
             .as(Book.class);
 
         bookUpdated.setAuthor("Miguel Gonçalves");
-        bookUpdated.setStatus(BookStatus.UNAVAILABLE);
+        bookUpdated.setDescription("Livro atualizado com sucesso");
+        bookUpdated.setStatus(BookStatus.NOT_AVAILABLE);
+        // Ignorar o ID do livro ao atualizar, pois ele não deve ser alterado.
+        bookUpdated.setId(null);
 
-        Integer livroObtidoId = given()
+        String livroObtidoIdResponse = given()
             .contentType(ContentType.JSON)
             .body(bookUpdated)
         .when()
@@ -147,12 +172,9 @@ public class BookTest extends BaseTest {
         .then()
             .statusCode(200)
             .extract()
-            .as(Integer.class);
+            .asString();
 
-        assertAll(
-            () -> assertNotNull(livroObtidoId),
-            () -> assertTrue(livroObtidoId > 0, "O ID do livro atualizado deve ser maior que zero")
-        );
+        Integer livroObtidoId = Integer.valueOf(livroObtidoIdResponse.trim());
 
         Book livroObtido = given()
         .when()
@@ -170,19 +192,30 @@ public class BookTest extends BaseTest {
             () -> assertEquals("Addison-Wesley", livroObtido.getPublisher()),
             () -> assertEquals(2018, livroObtido.getEditionYear()),
             () -> assertEquals("3", livroObtido.getEdition()),
-            () -> assertEquals("Livro antes da atualização", livroObtido.getDescription()),
+            () -> assertEquals("Livro atualizado com sucesso", livroObtido.getDescription()),
             () -> assertEquals(bookUpdated.getIsbn(), livroObtido.getIsbn()),
-            () -> assertEquals(BookStatus.UNAVAILABLE, livroObtido.getStatus())
+            () -> assertEquals(BookStatus.NOT_AVAILABLE, livroObtido.getStatus())
         );
     }
 
     @Test
     @Order(5)
-    @DisplayName("CT005 - Tentar apagar um livro com forceRemove true mesmo que haja uma reserva ativa")
+    @DisplayName("CT005 - Apagar um livro com sucesso")
+    public void deveApagarLivroComSucesso() {
+        given()
+        .when()
+            .delete("/book/{id}", livroParaTesteId)
+        .then()
+            .statusCode(204);
+    }
+
+
+    // ATENÇÃO: A partir de aqui, os testes terão um BeforeEach que criará um livro e um membro com reserva ativa, para testar cenários específicos. Também terá um AfterEach para apagar os dados criados.
+
+    @Test
+    @Order(6)
+    @DisplayName("CT006 - Tentar apagar um livro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarLivroMesmoComReservaAtiva() {
-        livroComReservaAtivaId = criarLivro(criarLivroValido());
-        membroComReservaAtivaId = criarMembro(criarMembroValido());
-        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
 
         given()
             .queryParam("forceRemove", true)
@@ -192,5 +225,20 @@ public class BookTest extends BaseTest {
             .statusCode(204);
 
         livroComReservaAtivaId = null;
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName("CT007 - Verificar se o status do livro é atualizado para RESERVED quando há uma reserva ativa")
+    public void deveAtualizarStatusDoLivroParaReservedQuandoHaReservaAtiva() {
+        Book livroObtido = given()
+        .when()
+            .get("/book/{id}", livroComReservaAtivaId)
+        .then()
+            .statusCode(200)
+            .extract()
+            .as(Book.class);
+
+        assertEquals(BookStatus.RESERVED, livroObtido.getStatus());
     }
 }

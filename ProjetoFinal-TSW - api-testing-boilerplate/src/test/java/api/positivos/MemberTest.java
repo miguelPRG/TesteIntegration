@@ -56,15 +56,15 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(16)
-    @DisplayName("CT016 - Criar um membro com sucesso")
+    @Order(18)
+    @DisplayName("CT018 - Criar um membro com sucesso")
     public void deveCriarMembroComSucesso() {
         assertTrue(membroParaTesteId > 0);
     }
 
     @Test
-    @Order(17)
-    @DisplayName("CT017 - Listar membros com sucesso")
+    @Order(19)
+    @DisplayName("CT019 - Listar membros com sucesso")
     public void deveListarMembrosComSucesso() {
         List<Member> membros = given()
         .when()
@@ -98,8 +98,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(18)
-    @DisplayName("CT018 - Obter um membro existente por id")
+    @Order(20)
+    @DisplayName("CT020 - Obter um membro existente por id")
     public void deveObterMembroPorIdComSucesso() {
         Member membroObtido = given()
         .when()
@@ -120,8 +120,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(19)
-    @DisplayName("CT019 - Atualizar um membro com sucesso")
+    @Order(21)
+    @DisplayName("CT021 - Atualizar um membro com sucesso")
     public void deveAtualizarMembroComSucesso() {
         Member membroAtualizado = given()
         .when()
@@ -161,8 +161,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(20)
-    @DisplayName("CT020 - Apagar um membro com sucesso")
+    @Order(22)
+    @DisplayName("CT022 - Apagar um membro com sucesso")
     public void deveApagarMembroComSucesso() {
         given()
         .when()
@@ -180,8 +180,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(21)
-    @DisplayName("CT021 - Apagar membro com forceRemove true mesmo que haja uma reserva ativa")
+    @Order(23)
+    @DisplayName("CT023 - Apagar membro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarMembroMesmoComReservaAtiva() {
         membroComReservaAtivaId = criarMembro(criarMembroValido());
         livroComReservaAtivaId = criarLivro(criarLivroValido());
