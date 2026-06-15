@@ -40,29 +40,40 @@ public final class ApiActions {
             .as(Integer.class);
     }
 
-    public static void criarReserva(Integer membroId, Integer livroId) {
-        given()
+    public static Integer criarReserva(Integer membroId, Integer livroId) {
+        return given()
         .when()
             .post("/reservation/member/{memberId}/book{bookId}", membroId, livroId)
         .then()
-            .statusCode(201);
+            .statusCode(201)
+            .extract()
+            .as(Integer.class);
     }
 
-    public static void apagarLivro(Integer livroId) {
+    public static void apagarLivro(Integer livroId, boolean forceRemove) {
         given()
-            .queryParam("forceRemove", true)
+            .queryParam("forceRemove", forceRemove)
         .when()
             .delete("/book/{id}", livroId)
         .then()
             .statusCode(anyOf(equalTo(204), equalTo(404)));
     }
 
-    public static void apagarMembro(Integer membroId) {
+    public static void apagarLivro(Integer livroId) {
+        apagarLivro(livroId, true);
+    }
+
+    public static void apagarMembro(Integer membroId, boolean forceRemove) {
         given()
-            .queryParam("forceRemove", true)
+            .queryParam("forceRemove", forceRemove)
         .when()
             .delete("/member/{id}", membroId)
         .then()
             .statusCode(anyOf(equalTo(204), equalTo(404)));
     }
+
+    public static void apagarMembro(Integer membroId) {
+        apagarMembro(membroId, true);
+    }
+
 }

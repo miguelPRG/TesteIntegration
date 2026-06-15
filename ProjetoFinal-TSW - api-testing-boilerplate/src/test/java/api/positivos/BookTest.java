@@ -2,17 +2,17 @@ package api.positivos;
 
 import java.util.List;
 
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
@@ -30,53 +30,44 @@ import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
 
 @DisplayName("Testes da Entidade: Book")
-@TestMethodOrder(MethodOrderer.DisplayName.class)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BookTest extends BaseTest {
 
-    private Integer livroParaTesteId;
-    private Integer membroParaTesteId;
-    private String isbnParaTeste;
+    private static Integer livroParaTesteId;
+    private static Integer livroComReservaAtivaId;
+    private static Integer membroComReservaAtivaId;
+    private static String isbnParaTeste;
 
-    @BeforeEach
-    void criarLivroAntesDeAtualizarOuApagar(TestInfo testInfo) {
-        boolean testePrecisaDeLivroExistente = testInfo.getTestMethod()
-            .map(method -> method.getName().equals("deveListarLivrosComSucesso")
-                || method.getName().equals("deveObterLivroPorIdComSucesso")
-                || method.getName().equals("deveAtualizarLivroComSucesso")
-                || method.getName().equals("deveApagarLivroComSucesso")
-                || method.getName().equals("deveApagarLivroMesmoComReservaAtiva")
-            )
-            .orElse(false);
-
-        if (!testePrecisaDeLivroExistente) {
-            return;
-        }
-
+    @BeforeAll
+    static void criarLivroParaTestes() {
         isbnParaTeste = gerarIsbnValido();
         livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro antes da atualização"));
     }
 
-    @AfterEach
-    void limparDadosCriados() {
+    @AfterAll
+    static void limparDadosCriados() {
         if (livroParaTesteId != null) {
             apagarLivro(livroParaTesteId);
         }
 
-        if (membroParaTesteId != null) {
-            apagarMembro(membroParaTesteId);
+        if (livroComReservaAtivaId != null) {
+            apagarLivro(livroComReservaAtivaId);
         }
 
-        livroParaTesteId = null;
-        membroParaTesteId = null;
+        if (membroComReservaAtivaId != null) {
+            apagarMembro(membroComReservaAtivaId);
+        }
     }
 
     @Test
+    @Order(1)
     @DisplayName("CT001 - Criar um livro com sucesso")
     public void deveCriarLivroComSucesso() {
-        livroParaTesteId = criarLivro(criarLivroValido());
+        assertTrue(livroParaTesteId > 0);
     }
 
     @Test
+    @Order(2)
     @DisplayName("CT002 - Listar livros com sucesso")
     public void deveListarLivrosComSucesso() {
         List<Book> livros = given()
@@ -108,6 +99,7 @@ public class BookTest extends BaseTest {
     }
 
     @Test
+    @Order(3)
     @DisplayName("CT003 - Obter um livro existente por id")
     public void deveObterLivroPorIdComSucesso() {
         Book livroObtido = given()
@@ -133,6 +125,7 @@ public class BookTest extends BaseTest {
     }
 
     @Test
+    @Order(4)
     @DisplayName("CT004 - Atualizar um livro com sucesso")
     public void deveAtualizarLivroComSucesso() {
         Book bookUpdated = given()
@@ -184,18 +177,20 @@ public class BookTest extends BaseTest {
     }
 
     @Test
+    @Order(5)
     @DisplayName("CT005 - Tentar apagar um livro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarLivroMesmoComReservaAtiva() {
-        membroParaTesteId = criarMembro(criarMembroValido());
-        criarReserva(membroParaTesteId, livroParaTesteId);
+        livroComReservaAtivaId = criarLivro(criarLivroValido());
+        membroComReservaAtivaId = criarMembro(criarMembroValido());
+        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
 
         given()
             .queryParam("forceRemove", true)
         .when()
-            .delete("/book/{id}", livroParaTesteId)
+            .delete("/book/{id}", livroComReservaAtivaId)
         .then()
             .statusCode(204);
 
-        livroParaTesteId = null;
+        livroComReservaAtivaId = null;
     }
 }

@@ -3,13 +3,13 @@ package api.negativos;
 import java.time.LocalDate;
 import java.util.Map;
 
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
@@ -28,65 +28,45 @@ import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 
 @DisplayName("Testes Negativos da Entidade: Member")
-@TestMethodOrder(MethodOrderer.DisplayName.class)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MemberTest extends BaseTest {
 
-    private Integer membroParaTesteId;
-    private Integer livroParaTesteId;
-    private Map<String, Object> membroComDatatypesInvalidos;
+    private static Integer membroParaTesteId;
+    private static Integer membroComReservaAtivaId;
+    private static Integer livroParaTesteId;
+    private static Integer membroCriadoInesperadamenteId;
+    private static Map<String, Object> membroComDatatypesInvalidos;
 
-    @BeforeEach
-    void prepararDadosQuandoNecessario(TestInfo testInfo) {
-        boolean testeUsaMembroComDatatypesInvalidos = testInfo.getTestMethod()
-            .map(method -> method.getName().equals("deveFalharAoCriarMembroComCamposDatatypeInvalidos")
-                || method.getName().equals("deveFalharAoAtualizarMembroComCamposDatatypeInvalidos")
-            )
-            .orElse(false);
-
-        boolean testePrecisaDeMembroExistente = testInfo.getTestMethod()
-            .map(method -> method.getName().equals("deveFalharAoAtualizarMembroComCamposDatatypeInvalidos")
-                || method.getName().equals("deveFalharAoAtualizarMembroComDatasNoFuturo")
-                || method.getName().equals("deveFalharAoAtualizarMembroComCamposFormatoInvalido")
-                || method.getName().equals("deveFalharAoApagarMembroAssociadoSemForceRemove")
-            )
-            .orElse(false);
-
-        boolean testePrecisaDeReservaAtiva = testInfo.getTestMethod()
-            .map(method -> method.getName().equals("deveFalharAoApagarMembroAssociadoSemForceRemove"))
-            .orElse(false);
-
-        if (testeUsaMembroComDatatypesInvalidos) {
-            membroComDatatypesInvalidos = criarMembroComDatatypesInvalidos();
-        }
-
-        if (!testePrecisaDeMembroExistente) {
-            return;
-        }
-
+    @BeforeAll
+    static void prepararDadosParaTestes() {
+        membroComDatatypesInvalidos = criarMembroComDatatypesInvalidos();
         membroParaTesteId = criarMembro(criarMembroValido());
-
-        if (testePrecisaDeReservaAtiva) {
-            livroParaTesteId = criarLivro(criarLivroValido());
-            criarReserva(membroParaTesteId, livroParaTesteId);
-        }
+        membroComReservaAtivaId = criarMembro(criarMembroValido());
+        livroParaTesteId = criarLivro(criarLivroValido());
+        criarReserva(membroComReservaAtivaId, livroParaTesteId);
     }
 
-    @AfterEach
-    void limparDadosCriados() {
+    @AfterAll
+    static void limparDadosCriados() {
         if (membroParaTesteId != null) {
             apagarMembro(membroParaTesteId);
+        }
+
+        if (membroCriadoInesperadamenteId != null) {
+            apagarMembro(membroCriadoInesperadamenteId);
+        }
+
+        if (membroComReservaAtivaId != null) {
+            apagarMembro(membroComReservaAtivaId);
         }
 
         if (livroParaTesteId != null) {
             apagarLivro(livroParaTesteId);
         }
-
-        membroParaTesteId = null;
-        livroParaTesteId = null;
-        membroComDatatypesInvalidos = null;
     }
 
     @Test
+    @Order(22)
     @DisplayName("CT022 - Criar membro com campos de datatype inválidos deve falhar")
     public void deveFalharAoCriarMembroComCamposDatatypeInvalidos() {
         Response response = given()
@@ -96,13 +76,14 @@ public class MemberTest extends BaseTest {
             .post("/member");
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            membroParaTesteId = response.as(Integer.class);
+            membroCriadoInesperadamenteId = response.as(Integer.class);
         }
 
         assertEquals(400, response.statusCode());
     }
 
     @Test
+    @Order(23)
     @DisplayName("CT023 - Criar membro com datas inválidas deve falhar")
     public void deveFalharAoCriarMembroComDatasInvalidas() {
         Member membroInvalido = criarMembroValido();
@@ -116,13 +97,14 @@ public class MemberTest extends BaseTest {
             .post("/member");
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            membroParaTesteId = response.as(Integer.class);
+            membroCriadoInesperadamenteId = response.as(Integer.class);
         }
 
         assertEquals(400, response.statusCode());
     }
 
     @Test
+    @Order(24)
     @DisplayName("CT024 - Criar membro com datas de nascimento ou registro no futuro deve falhar")
     public void deveFalharAoCriarMembroComDatasNoFuturo() {
         Member membroInvalido = criarMembroValido();
@@ -137,13 +119,14 @@ public class MemberTest extends BaseTest {
             .post("/member");
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            membroParaTesteId = response.as(Integer.class);
+            membroCriadoInesperadamenteId = response.as(Integer.class);
         }
 
         assertEquals(400, response.statusCode());
     }
 
     @Test
+    @Order(25)
     @DisplayName("CT025 - Criar membro com postal code, cidade, país, telefone, NIF ou email inválido deve falhar")
     public void deveFalharAoCriarMembroComCamposFormatoInvalido() {
         Member membroInvalido = criarMembroComCamposFormatoInvalido();
@@ -155,13 +138,14 @@ public class MemberTest extends BaseTest {
             .post("/member");
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            membroParaTesteId = response.as(Integer.class);
+            membroCriadoInesperadamenteId = response.as(Integer.class);
         }
 
         assertEquals(400, response.statusCode());
     }
 
     @Test
+    @Order(26)
     @DisplayName("CT026 - Obter membro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoObterMembroComIdInexistenteOuInvalido() {
         given()
@@ -178,6 +162,7 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(27)
     @DisplayName("CT027 - Atualizar membro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoAtualizarMembroComIdInexistenteOuInvalido() {
         Member membroAtualizado = criarMembroValido();
@@ -200,6 +185,7 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(28)
     @DisplayName("CT028 - Atualizar membro com campos de datatype inválidos deve falhar")
     public void deveFalharAoAtualizarMembroComCamposDatatypeInvalidos() {
         given()
@@ -212,6 +198,7 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(29)
     @DisplayName("CT029 - Atualizar membro com datas de nascimento ou registro no futuro deve falhar")
     public void deveFalharAoAtualizarMembroComDatasNoFuturo() {
         Member membroInvalido = criarMembroValido();
@@ -229,6 +216,7 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(30)
     @DisplayName("CT030 - Atualizar membro com postal code, cidade, país, telefone, NIF ou email inválido deve falhar")
     public void deveFalharAoAtualizarMembroComCamposFormatoInvalido() {
         given()
@@ -241,20 +229,22 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(31)
     @DisplayName("CT031 - Apagar membro associado a uma reserva sem usar forceRemove deve falhar")
     public void deveFalharAoApagarMembroAssociadoSemForceRemove() {
         Response response = given()
         .when()
-            .delete("/member/{id}", membroParaTesteId);
+            .delete("/member/{id}", membroComReservaAtivaId);
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            membroParaTesteId = null;
+            membroComReservaAtivaId = null;
         }
 
         assertEquals(409, response.statusCode());
     }
 
     @Test
+    @Order(32)
     @DisplayName("CT032 - Apagar membro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoApagarMembroComIdInexistenteOuInvalido() {
         given()

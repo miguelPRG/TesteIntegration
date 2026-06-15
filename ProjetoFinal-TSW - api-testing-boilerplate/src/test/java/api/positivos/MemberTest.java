@@ -2,17 +2,17 @@ package api.positivos;
 
 import java.util.List;
 
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
@@ -28,48 +28,42 @@ import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
 
 @DisplayName("Testes da Entidade: Member")
-@TestMethodOrder(MethodOrderer.DisplayName.class)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MemberTest extends BaseTest {
 
-    private Integer membroParaTesteId;
-    private Integer livroParaTesteId;
+    private static Integer membroParaTesteId;
+    private static Integer membroComReservaAtivaId;
+    private static Integer livroComReservaAtivaId;
 
-    @BeforeEach
-    void criarMembroQuandoNecessario(TestInfo testInfo) {
-        boolean testePrecisaDeMembroExistente = testInfo.getTestMethod()
-            .map(method -> method.getName().equals("deveListarMembrosComSucesso")
-                || method.getName().equals("deveObterMembroPorIdComSucesso")
-                || method.getName().equals("deveAtualizarMembroComSucesso")
-                || method.getName().equals("deveApagarMembroComSucesso")
-            )
-            .orElse(false);
-
-        if (testePrecisaDeMembroExistente) {
-            membroParaTesteId = criarMembro(criarMembroValido());
-        }
+    @BeforeAll
+    static void criarMembroParaTestes() {
+        membroParaTesteId = criarMembro(criarMembroValido());
     }
 
-    @AfterEach
-    void limparDadosCriados() {
+    @AfterAll
+    static void limparDadosCriados() {
         if (membroParaTesteId != null) {
             apagarMembro(membroParaTesteId);
         }
 
-        if (livroParaTesteId != null) {
-            apagarLivro(livroParaTesteId);
+        if (membroComReservaAtivaId != null) {
+            apagarMembro(membroComReservaAtivaId);
         }
 
-        membroParaTesteId = null;
-        livroParaTesteId = null;
+        if (livroComReservaAtivaId != null) {
+            apagarLivro(livroComReservaAtivaId);
+        }
     }
 
     @Test
+    @Order(16)
     @DisplayName("CT016 - Criar um membro com sucesso")
     public void deveCriarMembroComSucesso() {
-        membroParaTesteId = criarMembro(criarMembroValido());
+        assertTrue(membroParaTesteId > 0);
     }
 
     @Test
+    @Order(17)
     @DisplayName("CT017 - Listar membros com sucesso")
     public void deveListarMembrosComSucesso() {
         List<Member> membros = given()
@@ -104,6 +98,7 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(18)
     @DisplayName("CT018 - Obter um membro existente por id")
     public void deveObterMembroPorIdComSucesso() {
         Member membroObtido = given()
@@ -125,6 +120,7 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(19)
     @DisplayName("CT019 - Atualizar um membro com sucesso")
     public void deveAtualizarMembroComSucesso() {
         Member membroAtualizado = given()
@@ -165,6 +161,7 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(20)
     @DisplayName("CT020 - Apagar um membro com sucesso")
     public void deveApagarMembroComSucesso() {
         given()
@@ -183,19 +180,20 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
+    @Order(21)
     @DisplayName("CT021 - Apagar membro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarMembroMesmoComReservaAtiva() {
-        membroParaTesteId = criarMembro(criarMembroValido());
-        livroParaTesteId = criarLivro(criarLivroValido());
-        criarReserva(membroParaTesteId, livroParaTesteId);
+        membroComReservaAtivaId = criarMembro(criarMembroValido());
+        livroComReservaAtivaId = criarLivro(criarLivroValido());
+        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
 
         given()
             .queryParam("forceRemove", true)
         .when()
-            .delete("/member/{id}", membroParaTesteId)
+            .delete("/member/{id}", membroComReservaAtivaId)
         .then()
             .statusCode(204);
 
-        membroParaTesteId = null;
+        membroComReservaAtivaId = null;
     }
 }
