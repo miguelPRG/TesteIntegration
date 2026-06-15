@@ -3,13 +3,15 @@ package api.negativos;
 import java.time.LocalDate;
 import java.util.Map;
 
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
@@ -31,37 +33,54 @@ import io.restassured.response.Response;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MemberTest extends BaseTest {
 
-    private static Integer membroParaTesteId;
-    private static Integer membroComReservaAtivaId;
-    private static Integer livroParaTesteId;
-    private static Integer membroCriadoInesperadamenteId;
     private static Map<String, Object> membroComDatatypesInvalidos;
+
+    private Integer membroParaTesteId;
+    private Integer membroComReservaAtivaId;
+    private Integer livroParaTesteId;
+    private Integer membroCriadoInesperadamenteId;
+
+    private int obterOrdemTeste(TestInfo testInfo) {
+        return testInfo.getTestMethod()
+            .map(method -> method.getAnnotation(Order.class))
+            .map(Order::value)
+            .orElse(0);
+    }
 
     @BeforeAll
     static void prepararDadosParaTestes() {
         membroComDatatypesInvalidos = criarMembroComDatatypesInvalidos();
-        membroParaTesteId = criarMembro(criarMembroValido());
-        membroComReservaAtivaId = criarMembro(criarMembroValido());
-        livroParaTesteId = criarLivro(criarLivroValido());
-        criarReserva(membroComReservaAtivaId, livroParaTesteId);
     }
 
-    @AfterAll
-    static void limparDadosCriados() {
+    @BeforeEach
+    void prepararDadosParaTestesDeAtualizacao(TestInfo testInfo) {
+        int ordemTeste = obterOrdemTeste(testInfo);
+
+        if (ordemTeste == 30 || ordemTeste == 31 || ordemTeste == 32) {
+            membroParaTesteId = criarMembro(criarMembroValido());
+        }
+    }
+
+    @AfterEach
+    void limparDadosCriados() {
         if (membroParaTesteId != null) {
             apagarMembro(membroParaTesteId);
+            membroParaTesteId = null;
         }
 
         if (membroCriadoInesperadamenteId != null) {
             apagarMembro(membroCriadoInesperadamenteId);
+            membroCriadoInesperadamenteId = null;
         }
 
         if (membroComReservaAtivaId != null) {
-            apagarMembro(membroComReservaAtivaId);
+            apagarMembro(membroComReservaAtivaId, true);
+            membroComReservaAtivaId = null;
         }
 
         if (livroParaTesteId != null) {
-            apagarLivro(livroParaTesteId);
+            apagarLivro(livroParaTesteId, true);
+            livroParaTesteId = null;
         }
     }
 
@@ -232,6 +251,10 @@ public class MemberTest extends BaseTest {
     @Order(33)
     @DisplayName("CT033 - Apagar membro associado a uma reserva sem usar forceRemove deve falhar")
     public void deveFalharAoApagarMembroAssociadoSemForceRemove() {
+        membroComReservaAtivaId = criarMembro(criarMembroValido());
+        livroParaTesteId = criarLivro(criarLivroValido());
+        criarReserva(membroComReservaAtivaId, livroParaTesteId);
+
         Response response = given()
         .when()
             .delete("/member/{id}", membroComReservaAtivaId);

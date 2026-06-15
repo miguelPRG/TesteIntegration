@@ -3,7 +3,9 @@ package api.positivos;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import api.BaseTest;
@@ -35,23 +38,46 @@ public class MemberTest extends BaseTest {
     private static Integer membroComReservaAtivaId;
     private static Integer livroComReservaAtivaId;
 
+    private int obterOrdemTeste(TestInfo testInfo) {
+        return testInfo.getTestMethod()
+            .map(method -> method.getAnnotation(Order.class))
+            .map(Order::value)
+            .orElse(0);
+    }
+
     @BeforeAll
     static void criarMembroParaTestes() {
         membroParaTesteId = criarMembro(criarMembroValido());
     }
 
-    @AfterAll
-    static void limparDadosCriados() {
-        if (membroParaTesteId != null) {
-            apagarMembro(membroParaTesteId);
+    @BeforeEach
+    void prepararReservaAtivaParaTestesEspecificos(TestInfo testInfo) {
+        if (obterOrdemTeste(testInfo) != 23) {
+            return;
         }
 
+        membroComReservaAtivaId = criarMembro(criarMembroValido());
+        livroComReservaAtivaId = criarLivro(criarLivroValido());
+        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
+    }
+
+    @AfterEach
+    void limparDadosReservaAtiva() {
         if (membroComReservaAtivaId != null) {
-            apagarMembro(membroComReservaAtivaId);
+            apagarMembro(membroComReservaAtivaId, true);
+            membroComReservaAtivaId = null;
         }
 
         if (livroComReservaAtivaId != null) {
-            apagarLivro(livroComReservaAtivaId);
+            apagarLivro(livroComReservaAtivaId, true);
+            livroComReservaAtivaId = null;
+        }
+    }
+
+    @AfterAll
+    static void limparDadosCriados() {
+        if (membroParaTesteId != null) {
+            apagarMembro(membroParaTesteId, true);
         }
     }
 
@@ -183,10 +209,6 @@ public class MemberTest extends BaseTest {
     @Order(23)
     @DisplayName("CT023 - Apagar membro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarMembroMesmoComReservaAtiva() {
-        membroComReservaAtivaId = criarMembro(criarMembroValido());
-        livroComReservaAtivaId = criarLivro(criarLivroValido());
-        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
-
         given()
             .queryParam("forceRemove", true)
         .when()

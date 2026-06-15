@@ -2,6 +2,7 @@ package api.positivos;
 
 import java.util.List;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,7 +58,7 @@ public class BookTest extends BaseTest {
     void prepararReservaAtivaParaTestesEspecificos(TestInfo testInfo) {
         int ordemTeste = obterOrdemTeste(testInfo);
 
-        if (ordemTeste < 6) {
+        if (ordemTeste != 6 && ordemTeste != 7) {
             return;
         }
 
@@ -67,9 +68,7 @@ public class BookTest extends BaseTest {
     }
 
     @AfterEach
-    void limparDadosReservaAtiva(TestInfo testInfo) {
-
-
+    void limparDadosReservaAtiva() {
         if (livroComReservaAtivaId != null) {
             apagarLivro(livroComReservaAtivaId, true);
             livroComReservaAtivaId = null;
@@ -78,6 +77,13 @@ public class BookTest extends BaseTest {
         if (membroComReservaAtivaId != null) {
             apagarMembro(membroComReservaAtivaId, true);
             membroComReservaAtivaId = null;
+        }
+    }
+
+    @AfterAll
+    static void limparDadosCriados() {
+        if (livroParaTesteId != null) {
+            apagarLivro(livroParaTesteId, true);
         }
     }
 
@@ -208,9 +214,6 @@ public class BookTest extends BaseTest {
         .then()
             .statusCode(204);
     }
-
-
-    // ATENÇÃO: A partir de aqui, os testes terão um BeforeEach que criará um livro e um membro com reserva ativa, para testar cenários específicos. Também terá um AfterEach para apagar os dados criados.
 
     @Test
     @Order(6)
