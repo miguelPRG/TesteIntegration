@@ -40,7 +40,7 @@ public class ReservaTest extends BaseTest {
 
         int ordemTeste = obterOrdemTeste(testInfo);
 
-        if ((ordemTeste >= 47 && ordemTeste <= 48) || ordemTeste == 53) {
+        if ((ordemTeste >= 52 && ordemTeste <= 53) || ordemTeste == 58) {
             // Para os testes de reserva, precisamos garantir que temos um livro e um membro válidos.
             livroParaTesteId = criarLivro(criarLivroValido());
             membroParaTesteId = criarMembro(criarMembroValido());
@@ -64,8 +64,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(47)
-    @DisplayName("CT047 - Não deve criar uma reserva com id de membro ou de livro inexistentes ou inválidos")
+    @Order(52)
+    @DisplayName("CT052 - Não deve criar uma reserva com id de membro ou de livro inexistentes ou inválidos")
     void naoDeveCriarReservaComIdMembroEIdLivroInexistentesOuInvalidos() {
         given()
         .when()
@@ -93,8 +93,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(48)
-    @DisplayName("CT048 - Não deve criar uma reserva para um livro que já está reservado")
+    @Order(53)
+    @DisplayName("CT053 - Não deve criar uma reserva para um livro que já está reservado")
     void naoDeveCriarReservaParaLivroJaReservado() {
         given()
         .when()
@@ -105,8 +105,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(49)
-    @DisplayName("CT049 - Não deve sacar uma reserva com id inexistente ou inválido")
+    @Order(54)
+    @DisplayName("CT054 - Não deve sacar uma reserva com id inexistente ou inválido")
     void naoDeveSacarReservaComIdInexistenteOuInvalido() {
         given()
         .when()
@@ -122,8 +122,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(50)
-    @DisplayName("CT050 - Não deve obter reservas por id de membro inexistente ou inválido")
+    @Order(55)
+    @DisplayName("CT055 - Não deve obter reservas por id de membro inexistente ou inválido")
     void naoDeveObterReservasPorIdMembroInexistenteOuInvalido() {
         given()
         .when()
@@ -139,8 +139,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(51)
-    @DisplayName("CT051 - Não deve obter reservas por id de livro inexistente ou inválido")
+    @Order(56)
+    @DisplayName("CT056 - Não deve obter reservas por id de livro inexistente ou inválido")
     void naoDeveObterReservasPorIdLivroInexistenteOuInvalido() {
         given()
         .when()
@@ -156,8 +156,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(52)
-    @DisplayName("CT052 - Não deve atualizar uma reserva com id inexistente ou inválido")
+    @Order(57)
+    @DisplayName("CT057 - Não deve atualizar uma reserva com id inexistente ou inválido")
     void naoDeveAtualizarReservaComIdInexistenteOuInvalido() {
         given()
         .when()
@@ -173,8 +173,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(53)
-    @DisplayName("CT053 - Não deve atualizar uma reserva que já foi atualizada")
+    @Order(58)
+    @DisplayName("CT058 - Não deve atualizar uma reserva que já foi atualizada")
     void naoDeveAtualizarReservaJaAtualizada() {
         
         // Atualizamos a reserva pela primeira vez

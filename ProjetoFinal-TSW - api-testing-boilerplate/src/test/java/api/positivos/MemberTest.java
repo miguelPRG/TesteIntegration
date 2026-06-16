@@ -76,11 +76,11 @@ public class MemberTest extends BaseTest {
     void prepararDadosParaTestesNaoCreate(TestInfo testInfo) {
         int ordemTeste = obterOrdemTeste(testInfo);
 
-        if (ordemTeste >= 19 && ordemTeste <= 22) {
+        if (ordemTeste >= 21 && ordemTeste <= 24) {
             membroParaTesteId = criarMembro(criarMembroValido());
         }
 
-        if (ordemTeste == 23) {
+        if (ordemTeste == 25) {
             membroComReservaAtivaId = criarMembro(criarMembroValido());
             livroComReservaAtivaId = criarLivro(criarLivroValido());
             criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
@@ -106,8 +106,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(18)
-    @DisplayName("CT018 - Criar um membro com sucesso")
+    @Order(20)
+    @DisplayName("CT020 - Criar um membro com sucesso")
     public void deveCriarMembroComSucesso() {
         membroParaTesteId = criarMembro(criarMembroValido());
 
@@ -115,8 +115,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(19)
-    @DisplayName("CT019 - Listar membros com sucesso")
+    @Order(21)
+    @DisplayName("CT021 - Listar membros com sucesso")
     public void deveListarMembrosComSucesso() {
         List<Member> membros = given()
         .when()
@@ -137,8 +137,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(20)
-    @DisplayName("CT020 - Obter um membro existente por id")
+    @Order(22)
+    @DisplayName("CT022 - Obter um membro existente por id")
     public void deveObterMembroPorIdComSucesso() {
         Member membroObtido = given()
         .when()
@@ -152,8 +152,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(21)
-    @DisplayName("CT021 - Atualizar um membro com sucesso")
+    @Order(23)
+    @DisplayName("CT023 - Atualizar um membro com sucesso")
     public void deveAtualizarMembroComSucesso() {
         Member membroAtualizado = given()
         .when()
@@ -200,8 +200,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(22)
-    @DisplayName("CT022 - Apagar um membro com sucesso")
+    @Order(24)
+    @DisplayName("CT024 - Apagar um membro com sucesso")
     public void deveApagarMembroComSucesso() {
         given()
         .when()
@@ -219,8 +219,8 @@ public class MemberTest extends BaseTest {
     }
 
     @Test
-    @Order(23)
-    @DisplayName("CT023 - Apagar membro com forceRemove true mesmo que haja uma reserva ativa")
+    @Order(25)
+    @DisplayName("CT025 - Apagar membro com forceRemove true mesmo que haja uma reserva ativa")
     public void deveApagarMembroMesmoComReservaAtiva() {
         given()
             .queryParam("forceRemove", true)

@@ -60,7 +60,7 @@ public class BookTest extends BaseTest {
     void prepararDadosParaTestesNaoCreate(TestInfo testInfo) {
         int ordemTeste = obterOrdemTeste(testInfo);
 
-        if (ordemTeste == 14 || ordemTeste == 15) {
+        if (ordemTeste == 9 || ordemTeste == 16 || ordemTeste == 17) {
             isbnParaTeste = gerarIsbnValido();
             livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro antes da atualização"));
             livroComStatusInvalido = criarLivroComStatusInvalido(isbnParaTeste);
@@ -110,7 +110,52 @@ public class BookTest extends BaseTest {
 
     @Test
     @Order(9)
-    @DisplayName("CT009 - Criar livro com status inválido")
+    @DisplayName("CT009 - Criar e atualizar livro sem body deve falhar")
+    public void deveFalharAoCriarEAtualizarLivroSemBody() {
+        given()
+            .contentType(ContentType.JSON)
+        .when()
+            .post("/book")
+        .then()
+            .statusCode(400);
+
+        given()
+            .contentType(ContentType.JSON)
+        .when()
+            .put("/book/{id}", livroParaTesteId)
+        .then()
+            .statusCode(400);
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("CT010 - Criar livro com campos vazios ou null deve falhar")
+    public void deveFalharAoCriarLivroComCamposVaziosOuNull() {
+        Book livroComTituloVazio = criarLivroValido(gerarIsbnValido(), "Livro com título vazio");
+        livroComTituloVazio.setTitle("");
+
+        Response response = criarLivroInvalido(livroComTituloVazio);
+
+        assertEquals(400, response.statusCode(), "Título vazio deveria falhar");
+
+        Book livroComTituloEmBranco = criarLivroValido(gerarIsbnValido(), "Livro com título em branco");
+        livroComTituloEmBranco.setTitle("   ");
+
+        response = criarLivroInvalido(livroComTituloEmBranco);
+
+        assertEquals(400, response.statusCode(), "Título em branco deveria falhar");
+
+        Book livroComIsbnNull = criarLivroValido(gerarIsbnValido(), "Livro com ISBN null");
+        livroComIsbnNull.setIsbn(null);
+
+        response = criarLivroInvalido(livroComIsbnNull);
+
+        assertEquals(400, response.statusCode(), "ISBN null deveria falhar");
+    }
+
+    @Test
+    @Order(11)
+    @DisplayName("CT011 - Criar livro com status inválido")
     public void deveFalharAoCriarLivroComStatusInvalido() {
         isbnParaTeste = gerarIsbnValido();
         livroComStatusInvalido = criarLivroComStatusInvalido(isbnParaTeste);
@@ -121,8 +166,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(10)
-    @DisplayName("CT010 - Criar livro com ano inválido deve falhar")
+    @Order(12)
+    @DisplayName("CT012 - Criar livro com ano inválido deve falhar")
     public void deveFalharAoCriarLivroComAnoInvalido() {
         Book livroInvalido = new Book(
             "Título de Teste",
@@ -148,8 +193,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(11)
-    @DisplayName("CT011 - Criar livro com ISBN inválido ou já existente deve falhar")
+    @Order(13)
+    @DisplayName("CT013 - Criar livro com ISBN inválido ou já existente deve falhar")
     public void deveFalharAoCriarLivroComIsbnInvalidoOuExistente() {
         Book livroInvalido = new Book(
             "Título de Teste",
@@ -176,8 +221,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(12)
-    @DisplayName("CT012 - Obter livro com ID inexistente ou inválido deve falhar")
+    @Order(14)
+    @DisplayName("CT014 - Obter livro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoObterLivroComIdInexistente() {
         given()
         .when()
@@ -193,8 +238,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(13)
-    @DisplayName("CT013 - Atualizar livro com ID inexistente ou inválido deve falhar")
+    @Order(15)
+    @DisplayName("CT015 - Atualizar livro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoAtualizarLivroComIdInexistente() {
         Book livroAtualizado = new Book(
             "Título de Teste Atualizado",
@@ -225,8 +270,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(14)
-    @DisplayName("CT014 - Atualizar livro com campos de datatype inválido deve falhar")
+    @Order(16)
+    @DisplayName("CT016 - Atualizar livro com campos de datatype inválido deve falhar")
     public void deveFalharAoAtualizarLivroComCamposInvalidos() {
         given()
             .contentType(ContentType.JSON)
@@ -238,8 +283,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(15)
-    @DisplayName("CT015 - Atualizar livro com status inválido deve falhar")
+    @Order(17)
+    @DisplayName("CT017 - Atualizar livro com status inválido deve falhar")
     public void deveFalharAoAtualizarLivroComStatusInvalido() {
         given()
             .contentType(ContentType.JSON)
@@ -251,8 +296,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(16)
-    @DisplayName("CT016 - Apagar livro com ID inexistente ou inválido deve falhar")
+    @Order(18)
+    @DisplayName("CT018 - Apagar livro com ID inexistente ou inválido deve falhar")
     public void deveFalharAoApagarLivroComIdInexistente() {
         given()
         .when()
@@ -268,8 +313,8 @@ public class BookTest extends BaseTest {
     }
 
     @Test
-    @Order(17)
-    @DisplayName("CT017 - Apagar livro associados a uma reserva sem usar forceRemove deve falhar")
+    @Order(19)
+    @DisplayName("CT019 - Apagar livro associados a uma reserva sem usar forceRemove deve falhar")
     public void deveFalharAoApagarLivroAssociadoSemForceRemove() {
         livroComReservaAtivaId = criarLivro(criarLivroValido());
         membroParaTesteId = criarMembro(criarMembroValido());

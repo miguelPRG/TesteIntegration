@@ -84,15 +84,15 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(41)
-    @DisplayName("CT041 - Deve criar uma reserva com sucesso")
+    @Order(46)
+    @DisplayName("CT046 - Deve criar uma reserva com sucesso")
     void deveCriarReservaComSucesso() {
         assertNotNull(reservaParaTesteId);
     }
 
     @Test
-    @Order(42)
-    @DisplayName("CT042 - Listar todas as reservas ativas com sucesso")
+    @Order(47)
+    @DisplayName("CT047 - Listar todas as reservas ativas com sucesso")
     void deveListarTodasReservasAtivasComSucesso() {
         Response response = given()
         .when()
@@ -114,8 +114,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(43)
-    @DisplayName("CT043 - Obter uma reserva por ID com sucesso")
+    @Order(48)
+    @DisplayName("CT048 - Obter uma reserva por ID com sucesso")
     void deveObterReservaPorIdComSucesso() {
         
         Reserva reserva = given()
@@ -131,8 +131,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(44)
-    @DisplayName("CT044 - Obter uma reserva por id do membro com sucesso")
+    @Order(49)
+    @DisplayName("CT049 - Obter uma reserva por id do membro com sucesso")
     void deveObterReservaPorIdMembroComSucesso() {
         List<Reserva> reservas = given()
         .when()
@@ -152,8 +152,8 @@ public class ReservaTest extends BaseTest {
     }
     
     @Test
-    @Order(45)
-    @DisplayName("CT045 - Obter uma reserva por id do livro com sucesso")
+    @Order(50)
+    @DisplayName("CT050 - Obter uma reserva por id do livro com sucesso")
     void deveObterReservaPorIdLivroComSucesso() {
         List<Reserva> reservas = given()
         
@@ -174,8 +174,8 @@ public class ReservaTest extends BaseTest {
     }
 
     @Test
-    @Order(46)
-    @DisplayName("CT046 - Atualizar uma reserva com sucesso")
+    @Order(51)
+    @DisplayName("CT051 - Atualizar uma reserva com sucesso")
     void deveAtualizarReservaComSucesso() {
 
         // Sacamos a reserva antes de atualizar
