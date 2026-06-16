@@ -31,6 +31,7 @@ import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 
+@Order(2)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BookTest extends BaseTest {
 
@@ -39,7 +40,6 @@ public class BookTest extends BaseTest {
     private Integer livroParaTesteId;
     private Integer livroComReservaAtivaId;
     private Integer membroParaTesteId;
-    private Integer livroCriadoInesperadamenteId;
     private String isbnParaTeste;
     private Map<String, Object> livroComStatusInvalido;
 
@@ -52,6 +52,7 @@ public class BookTest extends BaseTest {
 
     @BeforeAll
     static void prepararDadosParaTestes() {
+        // Isto trata-se do payload do livro com datatypes inválidos. Não criamos nada na base de dados ainda.
         livroComDatatypesInvalidos = criarLivroComDatatypesInvalidos();
     }
 
@@ -73,11 +74,6 @@ public class BookTest extends BaseTest {
             livroParaTesteId = null;
         }
 
-        if (livroCriadoInesperadamenteId != null) {
-            apagarLivro(livroCriadoInesperadamenteId);
-            livroCriadoInesperadamenteId = null;
-        }
-
         if (livroComReservaAtivaId != null) {
             apagarLivro(livroComReservaAtivaId);
             livroComReservaAtivaId = null;
@@ -89,19 +85,25 @@ public class BookTest extends BaseTest {
         }
     }
 
-    @Test
-    @Order(8)
-    @DisplayName("CT008 - Criar livro com campos de datatype inválidos deve falhar")
-    public void deveFalharAoCriarLivroComCamposDatatypeInvalidos() {
+    private Response criarLivroInvalido(Object livroInvalido) {
         Response response = given()
             .contentType(ContentType.JSON)
-            .body(livroComDatatypesInvalidos)
+            .body(livroInvalido)
         .when()
             .post("/book");
 
         if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            livroCriadoInesperadamenteId = response.as(Integer.class);
+            apagarLivro(response.as(Integer.class));
         }
+
+        return response;
+    }
+
+    @Test
+    @Order(8)
+    @DisplayName("CT008 - Criar livro com campos de datatype inválidos deve falhar")
+    public void deveFalharAoCriarLivroComCamposDatatypeInvalidos() {
+        Response response = criarLivroInvalido(livroComDatatypesInvalidos);
 
         assertEquals(400, response.statusCode());
     }
@@ -113,15 +115,7 @@ public class BookTest extends BaseTest {
         isbnParaTeste = gerarIsbnValido();
         livroComStatusInvalido = criarLivroComStatusInvalido(isbnParaTeste);
 
-        Response response = given()
-            .contentType(ContentType.JSON)
-            .body(livroComStatusInvalido)
-        .when()
-            .post("/book");
-
-        if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            livroCriadoInesperadamenteId = response.as(Integer.class);
-        }
+        Response response = criarLivroInvalido(livroComStatusInvalido);
 
         assertEquals(400, response.statusCode());
     }
@@ -141,30 +135,14 @@ public class BookTest extends BaseTest {
             null
         );
 
-        Response response = given()
-            .contentType(ContentType.JSON)
-            .body(livroInvalido)
-        .when()
-            .post("/book");
-
-        if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            livroCriadoInesperadamenteId = response.as(Integer.class);
-        }
+        Response response = criarLivroInvalido(livroInvalido);
 
         assertEquals(400, response.statusCode(), "Ano inválido (negativo) deveria falhar");
 
         // Ano no futuro
         livroInvalido.setEditionYear(LocalDate.now().getYear() + 1);
 
-        response = given()
-            .contentType(ContentType.JSON)
-            .body(livroInvalido)
-        .when()
-            .post("/book");
-
-        if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            livroCriadoInesperadamenteId = response.as(Integer.class);
-        }
+        response = criarLivroInvalido(livroInvalido);
 
         assertEquals(400, response.statusCode());
     }
@@ -184,30 +162,15 @@ public class BookTest extends BaseTest {
             BookStatus.AVAILABLE
         );
 
-        Response response = given()
-            .contentType(ContentType.JSON)
-            .body(livroInvalido)
-        .when()
-            .post("/book");
-
-        if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            livroCriadoInesperadamenteId = response.as(Integer.class);
-        }
+        Response response = criarLivroInvalido(livroInvalido);
 
         assertEquals(400, response.statusCode(), "Deveria falhar ao criar livro com ISBN inválido");
 
         isbnParaTeste = gerarIsbnValido();
+        livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro original com ISBN repetido"));
         livroInvalido.setIsbn(isbnParaTeste);
 
-        response = given()
-            .contentType(ContentType.JSON)
-            .body(livroInvalido)
-        .when()
-            .post("/book");
-
-        if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-            apagarLivro(response.as(Integer.class));
-        }
+        response = criarLivroInvalido(livroInvalido);
 
         assertEquals(400, response.statusCode(), "Deveria falhar ao criar livro com ISBN já existente");
     }

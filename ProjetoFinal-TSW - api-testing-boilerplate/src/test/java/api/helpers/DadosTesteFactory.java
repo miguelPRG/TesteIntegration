@@ -92,17 +92,6 @@ public final class DadosTesteFactory {
         return membroInvalido;
     }
 
-    public static Member criarMembroComCamposFormatoInvalido() {
-        Member membroInvalido = criarMembroValido();
-        membroInvalido.setPostalCode("1234567");
-        membroInvalido.setCity("Lisboa123");
-        membroInvalido.setCountry("Portugal123");
-        membroInvalido.setPhoneNumber(12345);
-        membroInvalido.setNif(123456780);
-        membroInvalido.setEmail("email-invalido");
-        return membroInvalido;
-    }
-
     public static String gerarIsbnValido() {
         String base = "978" + String.format("%09d", gerarValorUnico() % 1_000_000_000);
         int soma = 0;

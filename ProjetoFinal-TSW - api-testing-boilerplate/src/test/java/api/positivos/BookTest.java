@@ -2,14 +2,12 @@ package api.positivos;
 
 import java.util.List;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -33,13 +31,14 @@ import static io.restassured.RestAssured.given;
 import io.restassured.http.ContentType;
 
 @DisplayName("Testes da Entidade: Book")
+@Order(1)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class BookTest extends BaseTest {
 
-    private static Integer livroParaTesteId;
-    private static Integer livroComReservaAtivaId;
-    private static Integer membroComReservaAtivaId;
-    private static String isbnParaTeste;
+    private Integer livroParaTesteId;
+    private Integer livroComReservaAtivaId;
+    private Integer membroComReservaAtivaId;
+    private String isbnParaTeste;
 
     private int obterOrdemTeste(TestInfo testInfo) {
         return testInfo.getTestMethod()
@@ -48,27 +47,58 @@ public class BookTest extends BaseTest {
             .orElse(0);
     }
 
-    @BeforeAll
-    static void criarLivroParaTestes() {
-        isbnParaTeste = gerarIsbnValido();
-        livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro antes da atualização"));
+    private void assertLivroTemCamposObrigatorios(Book livro) {
+        assertAll(
+            () -> assertNotNull(livro.getId()),
+            () -> assertNotNull(livro.getTitle()),
+            () -> assertNotNull(livro.getAuthor()),
+            () -> assertNotNull(livro.getPublisher()),
+            () -> assertNotNull(livro.getEditionYear()),
+            () -> assertNotNull(livro.getEdition()),
+            () -> assertNotNull(livro.getDescription()),
+            () -> assertNotNull(livro.getIsbn()),
+            () -> assertNotNull(livro.getStatus())
+        );
+    }
+
+    private void assertLivroCriadoNoSetup(Book livro) {
+        assertAll(
+            () -> assertNotNull(livro),
+            () -> assertEquals(livroParaTesteId, livro.getId()),
+            () -> assertEquals("Effective Java", livro.getTitle()),
+            () -> assertEquals("Joshua Bloch", livro.getAuthor()),
+            () -> assertEquals("Addison-Wesley", livro.getPublisher()),
+            () -> assertEquals(2018, livro.getEditionYear()),
+            () -> assertEquals("3", livro.getEdition()),
+            () -> assertEquals("Livro antes da atualização", livro.getDescription()),
+            () -> assertEquals(isbnParaTeste, livro.getIsbn()),
+            () -> assertEquals(BookStatus.AVAILABLE, livro.getStatus())
+        );
     }
 
     @BeforeEach
-    void prepararReservaAtivaParaTestesEspecificos(TestInfo testInfo) {
+    void prepararDadosParaTestesNaoCreate(TestInfo testInfo) {
         int ordemTeste = obterOrdemTeste(testInfo);
 
-        if (ordemTeste != 6 && ordemTeste != 7) {
-            return;
+        if (ordemTeste >= 2 && ordemTeste <= 5) {
+            isbnParaTeste = gerarIsbnValido();
+            livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro antes da atualização"));
         }
 
-        membroComReservaAtivaId = criarMembro(criarMembroValido());
-        livroComReservaAtivaId = criarLivro(criarLivroValido(gerarIsbnValido(), "Livro com reserva ativa"));
-        criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
+        if (ordemTeste == 6 || ordemTeste == 7) {
+            membroComReservaAtivaId = criarMembro(criarMembroValido());
+            livroComReservaAtivaId = criarLivro(criarLivroValido(gerarIsbnValido(), "Livro com reserva ativa"));
+            criarReserva(membroComReservaAtivaId, livroComReservaAtivaId);
+        }
     }
 
     @AfterEach
-    void limparDadosReservaAtiva() {
+    void limparDadosCriados() {
+        if (livroParaTesteId != null) {
+            apagarLivro(livroParaTesteId, true);
+            livroParaTesteId = null;
+        }
+
         if (livroComReservaAtivaId != null) {
             apagarLivro(livroComReservaAtivaId, true);
             livroComReservaAtivaId = null;
@@ -80,17 +110,13 @@ public class BookTest extends BaseTest {
         }
     }
 
-    @AfterAll
-    static void limparDadosCriados() {
-        if (livroParaTesteId != null) {
-            apagarLivro(livroParaTesteId, true);
-        }
-    }
-
     @Test
     @Order(1)
     @DisplayName("CT001 - Criar um livro com sucesso")
     public void deveCriarLivroComSucesso() {
+        isbnParaTeste = gerarIsbnValido();
+        livroParaTesteId = criarLivro(criarLivroValido(isbnParaTeste, "Livro antes da atualização"));
+
         assertTrue(livroParaTesteId > 0);
     }
 
@@ -110,17 +136,7 @@ public class BookTest extends BaseTest {
         assertFalse(livros.isEmpty());
 
         for (Book livro : livros) {
-            assertAll(
-                () -> assertNotNull(livro.getId()),
-                () -> assertNotNull(livro.getTitle()),
-                () -> assertNotNull(livro.getAuthor()),
-                () -> assertNotNull(livro.getPublisher()),
-                () -> assertNotNull(livro.getEditionYear()),
-                () -> assertNotNull(livro.getEdition()),
-                () -> assertNotNull(livro.getDescription()),
-                () -> assertNotNull(livro.getIsbn()),
-                () -> assertNotNull(livro.getStatus())
-            );
+            assertLivroTemCamposObrigatorios(livro);
         }
 
         assertTrue(livros.stream().anyMatch(livro -> livroParaTesteId.equals(livro.getId())));
@@ -138,18 +154,7 @@ public class BookTest extends BaseTest {
             .extract()
             .as(Book.class);
 
-        assertAll(
-            () -> assertNotNull(livroObtido),
-            () -> assertEquals(livroParaTesteId, livroObtido.getId()),
-            () -> assertEquals("Effective Java", livroObtido.getTitle()),
-            () -> assertEquals("Joshua Bloch", livroObtido.getAuthor()),
-            () -> assertEquals("Addison-Wesley", livroObtido.getPublisher()),
-            () -> assertEquals(2018, livroObtido.getEditionYear()),
-            () -> assertEquals("3", livroObtido.getEdition()),
-            () -> assertEquals("Livro antes da atualização", livroObtido.getDescription()),
-            () -> assertEquals(isbnParaTeste, livroObtido.getIsbn()),
-            () -> assertEquals(BookStatus.AVAILABLE, livroObtido.getStatus())
-        );
+        assertLivroCriadoNoSetup(livroObtido);
     }
 
     @Test
@@ -213,6 +218,8 @@ public class BookTest extends BaseTest {
             .delete("/book/{id}", livroParaTesteId)
         .then()
             .statusCode(204);
+
+        livroParaTesteId = null;
     }
 
     @Test
