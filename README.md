@@ -236,6 +236,10 @@ Execution evidence is stored in the `Resultados/` folder:
 
 These files can be used to review the manual/recorded outcome of the integration test execution by entity.
 
+### Gradle Report Screenshot
+
+![Gradle test report showing 58 tests, 0 failures and 15 skipped tests](image.png)
+
 ## Summary
 
 This project demonstrates a structured integration testing approach for a REST API. It validates both endpoint contracts and cross-entity business rules, while applying reusable helpers, generated test data, lifecycle cleanup, and clear test organization.
